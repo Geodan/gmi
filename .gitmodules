@@ -7,3 +7,6 @@
 [submodule "externals/gxp"]
 	path = externals/gxp
 	url = https://github.com/opengeo/gxp.git
+[submodule "externals/printpreview"]
+	path = externals/printpreview
+	url = https://github.com/opengeo/PrintPreview.git
