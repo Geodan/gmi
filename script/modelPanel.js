@@ -4,6 +4,7 @@ gmi.ModelPanel = Ext.extend(Ext.Panel, {
 		layout: 'vbox',
 		title: null,
 		id: null,
+		currentModel: null,
 		initComponent: function(){
 			this.addEvents("ready");
 			this.items = [{
@@ -22,14 +23,19 @@ gmi.ModelPanel = Ext.extend(Ext.Panel, {
 						xtype: 'button',
 						style: 'padding-top: 10px;',
 						width: 80
-					},//TT: weird, these items are only shown in the first instance of a gmi_modelpanel
-					items: [{
-						text: 'Start'
+					},
+					items: [
+						{
+							text: 'Start',
+							handler: function() {modelWindow.show();}
 						},{
-						text: 'Weergave'
+							text: 'Weergave',
+							handler: function() {alert('In ontwikkeling');}
 						},{
-						text: 'Beheer'
-					}]
+							text: 'Beheer',
+							handler: function() {alert('In ontwikkeling');}
+						}
+					]
 				}]
 			},{
 				title:'Simulaties',

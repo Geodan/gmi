@@ -57,12 +57,6 @@
 		Sources 
 	************/
 	sources: {
-		osgis: {
-			url: "/osgis/geoserver/wms", //is redirected to nimbus
-			title: "osGIS server",
-			ptype: "gxp_wmscsource",
-			version: "1.1.1"
-		},
 		spatial: {
 			url: "/geoserver/wms", //is redirected to nimbus
 			title: "GIS server models",
@@ -101,35 +95,15 @@
 			source: "spatial",
 			name: "nl_data:waterdeel_vlak",
 			visibility: true,
-			opacity: 1
+			opacity: 1,
+			group: "background"
 		}]
 	}
 	});
 	
 	app.on("ready", function() {
-	/*
-		var item = new Ext.buttonGroup({
-			columns: 1,
-			padding: 5,
-			title: "Step 1 - Select area",
-			html: "Create conversion parameters and select area in the map by dragging a box around it. This will be the models boundary.",
-			id: "farsitepanel1",
-			items: [
-				//actions["newfuelmodel"],
-				//actions["landuse2fuel"],
-				//{xtype: "panel", id: "terreinpanel1",padding: 5},
-				//actions["existingfuelmodel"],
-				//forms["terreinForm2"],
-				//actions["makeLcp"],
-				//forms["fuelmodelForm2"]
-			]
-		});
-		
-		
-		var panel = Ext.getCmp('eastPanel');
-		panel.add({xtype: 'gmi_modelpanel'});
-		panel.doLayout();
-		/* */
+	//Whatever is needed after loading the app (some COW initialisation for instance..)
+	
 	});
 	
 	</script>
