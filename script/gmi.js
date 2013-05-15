@@ -486,7 +486,7 @@ GeoExplorer.Gmi = Ext.extend(GeoExplorer, {
 		************/
         var eastPanel = new Ext.Panel({
         	xtype: "panel",
-			layout: "accordion",
+			layout: "fit",
 			id: "eastPanel",
 			region: "east",
 			width: 200,
@@ -495,12 +495,8 @@ GeoExplorer.Gmi = Ext.extend(GeoExplorer, {
 			collapsed: false,
 			items: [{
 				xtype: 'gmi_modelpanel',
-				title: 'Model 1',
+				title: 'Modelpanel',
 				id: 'modelpanel1'
-			},{
-				xtype: 'gmi_modelpanel',
-				title: 'Model 2',
-				id: 'modelpanel2'
 			}]
         });
         var toolbar = new Ext.Toolbar({
