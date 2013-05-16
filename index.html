@@ -24,6 +24,7 @@
         <script src="externals/GeoExt/lib/GeoExt/locale/GeoExt-fr.js" type="text/javascript"></script>
         <script src="externals/GeoExt/lib/GeoExt/locale/GeoExt-nl.js" type="text/javascript"></script>
         <link rel="stylesheet" type="text/css" href="externals/GeoExt/resources/css/geoext-all.css" />
+        <link rel="stylesheet" type="text/css" href="css/natuurbrandmodel.css" />
     </head>
     <body>
         <script>
@@ -53,7 +54,7 @@ var TerrainFeatureRecord = new GeoExt.data.FeatureRecord.create([
     {name: 'started', type: 'date'}
 ]);
 
-function textToRecords(data) {
+function weatherTextToRecords(data) {
     var records = [];
 
     // splits data in regels en verwijder commentaar en lege regels
@@ -65,8 +66,8 @@ function textToRecords(data) {
         records.push(new WeatherRecord({
             station: tokens[0],
             date: Date.parseDate(tokens[1], 'Ymd'), // convert yyyymmdd to date?
-            tmin: parseFloat(tokens[2]),
-            tmax: parseFloat(tokens[4]),
+            tmin: parseFloat(tokens[2])/10,
+            tmax: parseFloat(tokens[4])/10,
             hmin: parseFloat(tokens[6]),
             hmax: parseFloat(tokens[8])
         }));
@@ -98,7 +99,7 @@ function getClimateData() {
         }
     });
     var text = request.responseText;
-    return textToRecords(text);
+    return weatherTextToRecords(text);
 };
 
 var weatherColumnModel = new Ext.grid.ColumnModel({
@@ -131,15 +132,19 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
         xtype: 'datecolumn'
     }, {
         header: 'Tmin',
+        format: '00.0',
         dataIndex: 'tmin'
     }, {
         header: 'Tmax',
+        format: '00.0',
         dataIndex: 'tmax'
     }, {
         header: 'RVmin',
+        format: '000',
         dataIndex: 'hmin'
     }, {
         header: 'RVmax',
+        format: '000',
         dataIndex: 'hmax'
     }]
 });
@@ -161,14 +166,14 @@ var weatherStore = new Ext.data.Store({
 
 var weatherGrid = new Ext.grid.GridPanel({
     id: 'weathergrid',
-    title: 'Weather characteristics',
+    title: OpenLayers.i18n('Weather characteristics'),
     store: weatherStore,
     cm: weatherColumnModel
 });
 
 var weathersettingsWindow = new Ext.Window({
-    title: "Weather settings",
     id: 'weathersettingsWindow',
+    title: OpenLayers.i18n("Weather settings"),
     width: 600,
     height: 400,
     closable: true,
@@ -185,7 +190,7 @@ var weathersettingsWindow = new Ext.Window({
     //modal: false,
     items: [weatherGrid],//, windGrid],
     buttons:[{
-        text: 'Sluiten', 
+        text: OpenLayers.i18n('Close'), 
         handler: function() {
             weathersettingsWindow.hide();
         }
@@ -215,13 +220,15 @@ function showClimateData() {
 */
 
 OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
-    "Room for a description.": "Hier komt een beschrijving.",
+    "Room for a model panel.": "Hier komt een simulatie model.",
     
     "${layerName} is now the active layer.": "Kaartlaag '${layerName}' is nu actief",
     
     "Layers": "Kaartlagen",
     
-    "Simulation": "Simulatie",
+    "Simulation model": "Simulatiemodel",
+    
+    "Close": "Sluiten",
     
     "Ignite": "Aansteken",
     
@@ -356,9 +363,7 @@ Ext.onReady(function() {
                     visibility: true
                 }
             ),*/
-            new OpenLayers.Layer.OSM({
-                    transitionEffect: 'resize'
-                }),
+            new OpenLayers.Layer.OSM(),
             new OpenLayers.Layer.WMS('Water', 'http://model.geodan.nl/geoserver/wms?', {
                     layers: 'nl_data:waterdeel_vlak',
                     format: 'image/png',
@@ -595,19 +600,205 @@ Ext.onReady(function() {
         }]
     });
     
-    var viewportItems = [mapPanel, tree];
-    if (document.getElementById('desc')) {
-        viewportItems.push({
-            contentEl: document.getElementById('desc'),
+    var modelPanel = new Ext.Panel({
+            title: OpenLayers.i18n("Simulation model"),
+            contentEl: document.getElementById('model'),
             region: "east",
-            bodyStyle: {"padding": "5px"},
+            bodyStyle: {"padding": "0px"},
             collapsible: true,
             collapseMode: "mini",
             split: true,
             width: 200,
-            title: OpenLayers.i18n("Simulation")
-        });
-    }
+            layout: 'auto',
+            items: [new Ext.form.FormPanel({
+	title: OpenLayers.i18n("Step 1 - Location"),
+	//html: "Create conversion parameters and select area in the map by dragging a box around it. This will be the models boundary.",
+	id: "farsitepanel1",
+        collapsible: true,
+	labelWidth: 40,
+	labelAlign: 'left',
+	layout: {
+            type:  "form",
+            align: "center"
+	},
+	defaults: {
+            style: 'margin: 5px'
+	},
+	items: [
+	/*	{
+			xtype:'fieldset',
+			id: 'fieldset_conversie',
+			title: 'Conversie',
+			defaults: {
+				width: 150,
+			},
+			items: [
+				actions["landuse2fuel"]
+			]
+		},{
+			xtype: 'fieldset',
+			id: 'fieldset_nieuwbestaand',
+			title: 'Nieuw of bestaand',
+			defaults: {
+				width: 150,
+			},
+			items: [
+				actions["newfuelmodel"],
+				actions["existingfuelmodel"]
+			]
+		},*/
+                {
+                    xtype: 'fieldset',
+                    title: OpenLayers.i18n('Select area'),
+                    defaults: {
+                        width: 150
+                    },
+                    items: [
+                        {
+                            xtype: "panel", //need this to put plugin-terrein in 
+                            defaults: {width: 150, style: 'margin: 0px;'},
+                            id: "terreinpanel1", 
+                            border: false
+                        }, {
+                            xtype: 'numberfield',
+                            id: 'terrein_id',
+                            name: 'terrein_id',
+                            fieldLabel: OpenLayers.i18n('Terrein ID'),
+                            width: 40,
+                            disabled: true,
+                            hidden: true,
+                            value: '0'
+                        }
+                    ]
+                }, { /*
+			xtype: 'fieldset',
+			title: 'Bewerk terrein',
+			defaults: {
+				width: 150,
+			},
+			items: [
+				{
+					xtype: "panel", //need this to put edit-tool in 
+					defaults: {width: 150, style: 'margin: 0px;'},
+					id: "terreineditpanel1",
+                            border: false
+                        }
+                        ]
+                }, { */
+                        xtype: 'fieldset',
+                        title: OpenLayers.i18n('Save'),
+                        defaults: {
+                            width: 150
+                        },
+                        items: [
+                            {
+                                fieldLabel: OpenLayers.i18n('Name'),
+                                xtype: 'textfield',
+                                id: 'fuelmodel_name',
+                                name: 'fuelmodel_name',
+                                tooltip: OpenLayers.i18n('Name of terrain'),
+                                width: 100,
+                                align: 'right',
+                                value: OpenLayers.i18n('untitled')
+                                //style: 'padding: 0px;'
+                            },
+                            //actions["makeLcp"]
+                            new Ext.Button({
+                                text: OpenLayers.i18n("Save"),
+                                //xtype: 'button',
+                                tooltip: OpenLayers.i18n("Create landscape file on the base of currently selected region"),
+                                handler: function() {
+                                    /*
+                                     Ext.MessageBox.show({
+                                     msg: 'Model is being initialized (this may take a while)',
+                                     width: 300,
+                                     wait: true,
+                                     waitConfig: {interval: 200}
+                                     });
+                                     */
+                                    var userid = '0';
+                                    var terreinid = Ext.getCmp("terrein_id").getValue();
+                                    var landscapename = Ext.getCmp("fuelmodel_name").getValue();
+                                    Ext.Ajax.request({
+                                        //url: '../wildfire/pywps/pywps.cgi?service=wps&version=1.0.0&request=execute&identifier=makeLcp&datainputs=[terreinid='+terreinid+';terreinname='+terreinname+']',
+                                        url: '/geoserver/ows?', //service=WPS&request=execute&version=1.0.0&identifier=py:wildfire_makelcp&datainputs=userid=' + userid + ';terreinid=' + terreinid + ';landscapename=' + landscapename + ';&RawDataOutput=string&mimeType=application/json',
+                                        params: {
+                                            service: 'WPS',
+                                            version: '1.1.0',
+                                            request: 'execute',
+                                            identifier: 'py:wildfire_makelcp',
+                                            datainputs: combineParams({
+                                                userid: userid,
+                                                terreinid: terreinid,
+                                                landscapename: landscapename
+                                            }, ';'),
+                                            RawDataOutput: 'string',
+                                            mimeType: 'application/json'
+                                        },
+                                        success: wpsSuccessCallback
+                                    });
+                                }
+                            })
+                        ]
+                    }
+                    ]
+                }),
+                new Ext.form.FormPanel({
+                    title: 'Step 2 - Inputs',
+                    collapsible: true,
+                    defaults: {
+                        style: 'margin: 5px'
+                    },
+                    items: [
+                        {
+                            xtype: 'fieldset',
+                            title: OpenLayers.i18n('Weather data'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Show weather data'),
+                                    handler: showClimateData,
+                                    cls: 'g-actie-knop'
+                                })
+                            ]
+                        }, {
+                            xtype: 'fieldset',
+                            title: OpenLayers.i18n('Fire location'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Draw fire line'),
+                                    handler: drawFireLine,
+                                    cls: 'g-actie-knop'
+                                })
+                            ]
+                        }
+                    ]
+                }),
+                new Ext.form.FormPanel({
+                    title: 'Step 3 - Run model',
+                    collapsible: true,
+                    defaults: {
+                        style: 'margin: 5px'
+                    },
+                    html: '&lt;todo&gt;',
+                    cls: 'empty'
+                }),
+                new Ext.form.FormPanel({
+                    title: 'Step 4 - Outputs',
+                    collapsible: true,
+                    defaults: {
+                        style: 'margin: 5px'
+                    },
+                    html: '&lt;todo&gt;',
+                    cls: 'empty'
+                })]
+            });
+    var viewportItems = [mapPanel, tree, modelPanel];
     
     new Ext.Viewport({
         layout: "fit",
@@ -618,6 +809,8 @@ Ext.onReady(function() {
             items: viewportItems
         }
     });
+    
+    // toevoegen van stappen aan rechterkant (simPanel)
  
     var button = Ext.get('show-btn');
 
@@ -726,6 +919,67 @@ Ext.onReady(function() {
     });
 
 });
+
+function drawFireLine() {
+    not_implemented();
+};
+
+var wpsSuccessCallback = function(response) {
+    console.log('wpsSuccessCallback response', response);
+    
+    var params = JSON.parse(response.responseText);
+    var activerunid = params.runid;
+    if (params.status === 'scheduled') {
+        var runner = new Ext.util.TaskRunner();
+        // controleer voortgang
+        var task = {
+            interval: 1000, //1 second
+            run: function() {
+                //Ext.fly('clock').update(new Date().format('g:i:s A'));
+                Ext.Ajax.request({
+                    url:'/geoserver/ows?',//service=WPS&request=execute&version=1.0.0&identifier=py:checkModelStatus&datainputs=runid='+activerunid+';&RawDataOutput=string=mimeType="application/json"',
+                    params: {
+                        service: 'WPS',
+                        version: '1.1.0',
+                        request: 'execute',
+                        identifier: 'py:checkModelStatus',
+                        RawDataOutput: 'string',
+                        mimeType: 'application/json',
+                        datainputs: combineParams({
+                            runid: activerunid
+                        }, ';')
+                    },
+                    success: function(check_response) {
+                        //console.log(check_response);
+                        var params = JSON.parse(check_response.responseText);
+                        if (params.percentage == 100) {
+                            runner.stop(task);
+                            console.log('wfs taak is klaar');
+                        } else if (check_response.tId >= 30) {
+                            runner.stop(task);
+                            console.log('wfs taak duurde te lang');
+                        } else {
+                            console.log('voortgang', params.percentage);
+                        }
+                    }
+                });
+            }
+        };
+        runner.start(task);
+    }
+};
+
+function combineParams(o, sep) {
+    if (!sep) {
+        sep = ';';
+    }
+    var s = '';
+    for (var key in o) {
+        s += key + '=' + o[key] + sep;
+    }
+    return s;
+}
+
 //-->
         </script>
         <div id="online-or-offline">?</div>
@@ -748,6 +1002,9 @@ Ext.onReady(function() {
             </div>
         </div>
         
-        <div id="desc" class="i18n">Room for a description.</div>
+        <div id="model">
+            <!--p class="i18n">Room for a model panel.</p-->
+            <div id="desc"></div>
+        </div>
     </body>
 </html>
