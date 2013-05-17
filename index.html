@@ -786,7 +786,25 @@ Ext.onReady(function() {
                                                mimeType: 'application/json'
                                            },
                                            on_finished: function(out_params) {
+                                               // bewaar runid als terreinid
                                                Gmi.Session.terreinid = out_params.runid;
+                                               // verwijdere oude terreinen
+                                               var layers = map.getLayersByName('Terrein');
+                                               for (var i = layers.length - 1; i >= 0; i--) {
+                                                   map.removeLayer(layers[i]);
+                                               }
+                                               // voeg nieuwe terrein toe 
+                                               var name = 'model_wildfire:terrein_' + out_params.runid;
+                                               var layer = new OpenLayers.Layer.WMS('Terrein', 
+                                               'http://model.geodan.nl/geoserver/wms?', {
+                                                   layers: name,
+                                                   transparent: true,
+                                                   format: 'image/png'
+                                               }, {
+                                                   isBaseLayer: false,
+                                                   opacity: 0.6
+                                               });
+                                               map.addLayer(layer);
                                            },
                                            success: wpsSuccessCallback,
                                            failure: wpsFailureCallback
