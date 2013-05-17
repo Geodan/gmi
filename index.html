@@ -785,8 +785,8 @@ Ext.onReady(function() {
                                                RawDataOutput: 'string',
                                                mimeType: 'application/json'
                                            },
-                                           on_finished: function() {
-                                               not_implemented();
+                                           on_finished: function(out_params) {
+                                               Gmi.Session.terreinid = out_params.runid;
                                            },
                                            success: wpsSuccessCallback
                                         });
@@ -835,7 +835,7 @@ Ext.onReady(function() {
                                 //xtype: 'button',
                                 tooltip: OpenLayers.i18n("Create landscape file on the base of currently selected region"),
                                 handler: function() {
-                                    var terreinid = Ext.getCmp("terrein_id").getValue();
+                                    var terreinid = Gmi.Session.terreinid; //Ext.getCmp("terrein_id").getValue();
                                     var landscapename = Ext.getCmp("fuelmodel_name").getValue();
                                     if (! terreinid) {
                                         alert(OpenLayers.i18n('Landscape file cannot be prepared yet.'));
@@ -857,6 +857,9 @@ Ext.onReady(function() {
                                                 }, ';'),
                                                 RawDataOutput: 'string',
                                                 mimeType: 'application/json'
+                                            },
+                                            on_finished: function(out_params) {
+                                                
                                             },
                                             success: wpsSuccessCallback
                                         });
@@ -1100,7 +1103,9 @@ var wpsSuccessCallback = function(response, request) {
                             stopProgress();
                             console.log('wfs taak is klaar');
                             if (request.on_finished) {
-                                not_implemented();
+                                request.on_finished(params);
+                            } else {
+                                alert(OpenLayers.i18n('Process is ready; results are ignored'));
                             }
                         } else if (check_response.tId >= 30) {
                             runner.stop(task);
@@ -1130,7 +1135,7 @@ function startProgress(message) {
     });
 };
 
-function updateProgress(perc) {
+function updateProgress(i, perc) {
     Ext.MessageBox.updateProgress(i, OpenLayers.i18n('${perc}% completed',{perc: Math.round(perc)}));
 };
 
