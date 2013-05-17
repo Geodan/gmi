@@ -788,7 +788,8 @@ Ext.onReady(function() {
                                            on_finished: function(out_params) {
                                                Gmi.Session.terreinid = out_params.runid;
                                            },
-                                           success: wpsSuccessCallback
+                                           success: wpsSuccessCallback,
+                                           failure: wpsFailureCallback
                                         });
                                     }
                                 }
@@ -861,7 +862,8 @@ Ext.onReady(function() {
                                             on_finished: function(out_params) {
                                                 
                                             },
-                                            success: wpsSuccessCallback
+                                            success: wpsSuccessCallback,
+                                           failure: wpsFailureCallback
                                         });
                                     }
                                 },
@@ -1070,7 +1072,12 @@ function startModelRun() {
     not_implemented();
 };
 
-var wpsSuccessCallback = function(response, request) {
+var wpsFailureCallback = function(response, options) {
+    stopProgress();
+    alert(OpenLayers.i18n('WPS failure'));
+};
+
+var wpsSuccessCallback = function(response, options) {
     console.log('wpsSuccessCallback response', response);
     
     var params = JSON.parse(response.responseText);
@@ -1079,7 +1086,7 @@ var wpsSuccessCallback = function(response, request) {
         var runner = new Ext.util.TaskRunner();
         // controleer voortgang
         var task = {
-            interval: 1000, //1 second
+            interval: 1000, // 1 seconde
             run: function() {
                 //Ext.fly('clock').update(new Date().format('g:i:s A'));
                 Ext.Ajax.request({
@@ -1102,12 +1109,12 @@ var wpsSuccessCallback = function(response, request) {
                             runner.stop(task); 
                             stopProgress();
                             console.log('wfs taak is klaar');
-                            if (request.on_finished) {
-                                request.on_finished(params);
+                            if (options.on_finished) {
+                                options.on_finished(params);
                             } else {
                                 alert(OpenLayers.i18n('Process is ready; results are ignored'));
                             }
-                        } else if (check_response.tId >= 30) {
+                        } else if (check_response.tId >= 60) {
                             runner.stop(task);
                             stopProgress();
                             console.log('wfs taak duurde te lang');
