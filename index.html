@@ -30,7 +30,7 @@
         <script>
 //<!--
 // settings
-Ext.namespace('Gmi.Settings', 'Gmi.Session');
+Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Models');
 
 Gmi.Settings.openLayers_imgPath = 'img/';
 Gmi.Settings.openLayers_proxyHost = '/test/proxy.php?url=';
@@ -768,43 +768,49 @@ Ext.onReady(function() {
                                         // makesubset process aanroepen
                                         startProgress(OpenLayers.i18n('makesubset'));
                                         Ext.Ajax.request({
-                                           url: '/geoserver/ows?', 
-                                           params: {
-                                               service: 'WPS',
-                                               version: '1.1.0',
-                                               request: 'execute',
-                                               identifier: 'py:wildfire_makesubset',
-                                               datainputs: combineParams({
-                                                   userid: Gmi.Session.userid,
-                                                   name: 'test',
-                                                   left: bounds.left,
-                                                   lower: bounds.bottom,
-                                                   right: bounds.right,
-                                                   upper: bounds.top
-                                               }, ';'),
-                                               RawDataOutput: 'string',
-                                               mimeType: 'application/json'
-                                           },
-                                           on_finished: function(out_params) {
-                                               // bewaar runid als terreinid
-                                               Gmi.Session.terreinid = out_params.runid;
-                                               // verwijdere oude terreinen
-                                               var layers = map.getLayersByName('Terrein');
-                                               for (var i = layers.length - 1; i >= 0; i--) {
-                                                   map.removeLayer(layers[i]);
+                                            url: '/geoserver/ows?', 
+                                            params: {
+                                                service: 'WPS',
+                                                version: '1.1.0',
+                                                request: 'execute',
+                                                identifier: 'py:wildfire_makesubset',
+                                                datainputs: combineParams({
+                                                    userid: Gmi.Session.userid,
+                                                    name: 'test',
+                                                    left: bounds.left,
+                                                    lower: bounds.bottom,
+                                                    right: bounds.right,
+                                                    upper: bounds.top
+                                                }, ';'),
+                                                RawDataOutput: 'string',
+                                                mimeType: 'application/json'
+                                            },
+                                            on_finished: function(out_params) {
+                                                // bewaar runid als terreinid
+                                                Gmi.Session.terreinid = out_params.runid;
+                                                // verwijdere oude terreinen
+                                                var layers = map.getLayersByName('Terrein');
+                                                /*for (var i = layers.length - 1; i >= 0; i--) {
+                                                    map.removeLayer(layers[i]);
+                                                }*/
+                                                // voeg nieuwe terrein toe
+                                                var name = 'model_wildfire:terrein_' + out_params.runid;
+                                                if (layers.length > 0) {
+                                                    layers[0].mergeNewParams({
+                                                        layers: name
+                                                    });
+                                                } else {
+                                                    var layer = new OpenLayers.Layer.WMS('Terrein', 
+                                                    'http://model.geodan.nl/geoserver/wms?', {
+                                                        layers: name,
+                                                        transparent: true,
+                                                        format: 'image/png'
+                                                    }, {
+                                                        isBaseLayer: false,
+                                                        opacity: 0.6
+                                                    });
+                                                    map.addLayer(layer);
                                                }
-                                               // voeg nieuwe terrein toe 
-                                               var name = 'model_wildfire:terrein_' + out_params.runid;
-                                               var layer = new OpenLayers.Layer.WMS('Terrein', 
-                                               'http://model.geodan.nl/geoserver/wms?', {
-                                                   layers: name,
-                                                   transparent: true,
-                                                   format: 'image/png'
-                                               }, {
-                                                   isBaseLayer: false,
-                                                   opacity: 0.6
-                                               });
-                                               map.addLayer(layer);
                                            },
                                            success: wpsSuccessCallback,
                                            failure: wpsFailureCallback
@@ -862,7 +868,6 @@ Ext.onReady(function() {
                                         // maak landschap ('lcp') voor model aan
                                         startProgress(OpenLayers.i18n('makelcp'));
                                         Ext.Ajax.request({
-                                            //url: '../wildfire/pywps/pywps.cgi?service=wps&version=1.0.0&request=execute&identifier=makeLcp&datainputs=[terreinid='+terreinid+';terreinname='+terreinname+']',
                                             url: '/geoserver/ows?', //service=WPS&request=execute&version=1.0.0&identifier=py:wildfire_makelcp&datainputs=userid=' + userid + ';terreinid=' + terreinid + ';landscapename=' + landscapename + ';&RawDataOutput=string&mimeType=application/json',
                                             params: {
                                                 service: 'WPS',
@@ -881,7 +886,7 @@ Ext.onReady(function() {
                                                 
                                             },
                                             success: wpsSuccessCallback,
-                                           failure: wpsFailureCallback
+                                            failure: wpsFailureCallback
                                         });
                                     }
                                 },
