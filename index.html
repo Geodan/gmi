@@ -30,16 +30,44 @@
         <script>
 //<!--
 // settings
-Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Models');
+Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Services.WPS');
 
 Gmi.Settings.openLayers_imgPath = 'img/';
-Gmi.Settings.openLayers_proxyHost = '/test/proxy.php?url=';
-Gmi.Settings.maxArea = 10000 * 5000; // m2; 10 bij 5 km
+Gmi.Settings.openLayers_proxyHost = 'proxy.php?url=';
+Gmi.Settings.maxArea = 10000 * 10000; // m2; 10 bij 10 km, 100 km2
 
 Gmi.Session.userid = '0';
 
 OpenLayers.imgPath = Gmi.Settings.openLayers_imgPath;
 OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
+
+// Models
+Gmi.Services.WPS = {
+    url: '/geoserver/ows?',
+    
+    request: function(options) {
+        var config = Ext.extend({
+            url: '/geoserver/ows?',
+            params: {
+                service: 'WPS',
+                version: '1.1.0',
+                request: 'execute',
+                identifier: 'py:wildfire_makesubset',
+                datainputs: combineParams({
+                    userid: Gmi.Session.userid,
+                    name: 'test',
+                    left: bounds.left,
+                    lower: bounds.bottom,
+                    right: bounds.right,
+                    upper: bounds.top
+                }, ';'),
+                RawDataOutput: 'string',
+                mimeType: 'application/json'
+            },
+        }, options);
+        Ext.Ajax.Request(config);
+    }
+};
 
 // klimaatgegevens
 
@@ -715,6 +743,7 @@ Ext.onReady(function() {
                                             var geom = bounds.toGeometry();
                                             var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
                                             if (area > Gmi.Settings.maxArea) {
+                                                // TODO: in km2 zou leesbaarder zijn
                                                 alert(OpenLayers.i18n('Area ${area} is larger than ${max} m2', {
                                                     max: Gmi.Settings.maxArea, 
                                                     area: area
@@ -1105,9 +1134,10 @@ var wpsSuccessCallback = function(response, options) {
     
     var params = JSON.parse(response.responseText);
     var activerunid = params.runid;
+    // statussen: scheduled, running, error, finished
     if (params.status === 'scheduled') {
         var runner = new Ext.util.TaskRunner();
-        // controleer voortgang
+        // bij een 'scheduled' process moet voortgang gecontroleerd worden
         var task = {
             interval: 1000, // 1 seconde
             run: function() {
@@ -1128,10 +1158,15 @@ var wpsSuccessCallback = function(response, options) {
                     success: function(check_response) {
                         //console.log(check_response);
                         var params = JSON.parse(check_response.responseText);
-                        if (params.percentage == 100) {
+                        if (params.status === 'error') {
                             runner.stop(task); 
                             stopProgress();
-                            console.log('wfs taak is klaar');
+                            console.log('wfs taak ging fout', params);
+                            alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastMessage}));
+                        } else if (params.percentage == 100) {
+                            runner.stop(task); 
+                            stopProgress();
+                            console.log('wfs taak is klaar', params);
                             if (options.on_finished) {
                                 options.on_finished(params);
                             } else {
@@ -1140,16 +1175,36 @@ var wpsSuccessCallback = function(response, options) {
                         } else if (check_response.tId >= 60) {
                             runner.stop(task);
                             stopProgress();
-                            console.log('wfs taak duurde te lang');
+                            console.log('wfs taak duurde te lang', params);
                         } else {
                             updateProgress(check_response.tId, params.percentage);
-                            console.log('voortgang', params.percentage);
+                            console.log('voortgang', params);
                         }
+                    },
+                    failure: function() {
+                        stopProgress();
+                        runner.stop(task);
+                        console.log('WFS process failure', arguments);
+                        alert('WFS process failure');
                     }
                 });
             }
         };
         runner.start(task);
+    } else if (params.status === 'finished') {
+        stopProgress();
+        // direct resultaat, dus on_finished
+        if (options.on_finished) {
+            options.on_finished(params);
+        }
+    } else if (params.status === 'error') {
+        // fout
+        stopProgress();
+        alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastMessage}));
+    } else {
+        stopProgress();
+        // onbekende veld
+        alert(OpenLayers.i18n('Internal error: unknown return status'));
     }
 };
 
