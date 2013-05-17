@@ -30,10 +30,13 @@
         <script>
 //<!--
 // settings
-Ext.namespace('Gmi.Settings');
+Ext.namespace('Gmi.Settings', 'Gmi.Session');
 
 Gmi.Settings.openLayers_imgPath = 'img/';
 Gmi.Settings.openLayers_proxyHost = '/test/proxy.php?url=';
+Gmi.Settings.maxArea = 10000 * 5000; // m2; 10 bij 5 km
+
+Gmi.Session.userid = '0';
 
 OpenLayers.imgPath = Gmi.Settings.openLayers_imgPath;
 OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
@@ -275,6 +278,9 @@ Ext.onReady(function() {
     // dom is geladen en kan dus vertaald worden
     translateDom();
     
+    // maak tooltips mogelijk
+    Ext.QuickTips.init();
+    
     status = document.getElementById('online-or-offline');
 
     if (navigator.onLine) {
@@ -346,6 +352,7 @@ Ext.onReady(function() {
                     }
                 }),
                 new OpenLayers.Control.Zoom(),
+                new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: ''}),
                 nav = new OpenLayers.Control.NavigationHistory(),
                 //new OpenLayers.Control.Permalink(), // todo: uitzoeken werking geoext met permalink
                 toolbar
@@ -384,7 +391,8 @@ Ext.onReady(function() {
                     singleTile: true,
                     transitionEffect: 'resize'
                 }),
-            vector
+            vector,
+            new OpenLayers.Layer.Boxes('_boxes_', {displayInLayerSwitcher: false})
             /*,
             new OpenLayers.Layer.WMS("Tasmania Roads",
                 "http://demo.opengeo.org/geoserver/wms", {
@@ -484,9 +492,6 @@ Ext.onReady(function() {
                 //treeConfigWin.show();
                 //Ext.getCmp("treeconfig").setValue(treeConfig);
             }
-        }, {
-            text: OpenLayers.i18n('Climate data'),
-            handler: showClimateData
         }, {
             text: OpenLayers.i18n('Wfs Grid'),
             handler: function() {
@@ -607,16 +612,19 @@ Ext.onReady(function() {
             bodyStyle: {"padding": "0px"},
             collapsible: true,
             collapseMode: "mini",
+            autoScroll: true,
             split: true,
             width: 200,
             layout: 'auto',
-            items: [new Ext.form.FormPanel({
+            items: [
+    new Ext.form.FormPanel({
 	title: OpenLayers.i18n("Step 1 - Location"),
 	//html: "Create conversion parameters and select area in the map by dragging a box around it. This will be the models boundary.",
 	id: "farsitepanel1",
         collapsible: true,
 	labelWidth: 40,
 	labelAlign: 'left',
+        monitorValid: true, // 
 	layout: {
             type:  "form",
             align: "center"
@@ -651,7 +659,7 @@ Ext.onReady(function() {
                     xtype: 'fieldset',
                     title: OpenLayers.i18n('Select area'),
                     defaults: {
-                        width: 150
+                        width: 'inherited'
                     },
                     items: [
                         {
@@ -668,7 +676,124 @@ Ext.onReady(function() {
                             disabled: true,
                             hidden: true,
                             value: '0'
-                        }
+                        },
+                        new Ext.Button({
+                            text: OpenLayers.i18n("Select region"),
+                            //xtype: 'button',
+                            id: 'btn_select_region',
+                            enableToggle: true,
+                            tooltip: OpenLayers.i18n("Select region by dragging a rectangle in the map"),
+                            handler: function(b, e) {
+                                console.log('select region handler', b.pressed);
+                                var map = mapPanel.map;
+                                if (b.pressed) {
+                                    var control = new OpenLayers.Control();
+                                    b.control = control;
+                                    OpenLayers.Util.extend(control, {
+                                        draw: function () {
+                                            // this Handler.Box will intercept the shift-mousedown
+                                            // before Control.MouseDefault gets to see it
+                                            this.box = new OpenLayers.Handler.Box( control,
+                                                {"done": this.notice},
+                                                {keyMask: OpenLayers.Handler.MOD_SHIFT}
+                                            );
+                                            this.box.activate();
+                                        },
+
+                                        notice: function (bounds) {
+                                            // lower-left
+                                            var ll = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.left, bounds.bottom)); 
+                                            // upper-right
+                                            var ur = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.right, bounds.top)); 
+
+                                            var bounds = new OpenLayers.Bounds(
+                                                ll.lon.toFixed(0), // left
+                                                ll.lat.toFixed(0), // bottom
+                                                ur.lon.toFixed(0), // right
+                                                ur.lat.toFixed(0) // top
+                                            );
+                                            var geom = bounds.toGeometry();
+                                            var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
+                                            if (area > Gmi.Settings.maxArea) {
+                                                alert(OpenLayers.i18n('Area ${area} is larger than ${max} m2', {
+                                                    max: Gmi.Settings.maxArea, 
+                                                    area: area
+                                                }));
+                                                //return;
+                                            }
+                                            console.log('area', area);
+
+                                            var layers = map.getLayersByName('_boxes_');
+                                            if (layers.length > 0) {
+                                                // layer leegmaken
+                                                layers[0].clearMarkers();
+                                                // nieuwe toevoegen
+                                                var box = new OpenLayers.Marker.Box(bounds);
+                                                layers[0].addMarker(box);
+                                            }
+                                        }
+                                    });
+                                    mapPanel.map.addControl(control);
+                                } else {
+                                    // disable regio kiezen, maar laat gebied zichtbaar
+                                    b.control.box.deactivate();
+                                    map.removeControl(b.control);
+                                }
+                            },
+                            cls: 'g-actie-knop'
+                        }),
+                        new Ext.Button({
+                            text: OpenLayers.i18n('Make subset'),
+                            cls: 'g-actie-knop',
+                            handler: function(b, e) {
+                                // kaart variabele beschikbaar maken
+                                var map = mapPanel.map;
+                                // laag achterhalen
+                                var layers = map.getLayersByName('_boxes_');
+                                if (layers.length > 0) {
+                                    // rechthoek achterhalen
+                                    //var bounds = layers[0].getDataExtent(); // gaat fout omdat deze functie marker.lonlat gebruikt en deze hier null
+                                    var bounds = layers[0].markers.length > 0 ? layers[0].markers[0].bounds : null;
+                                    if (! bounds) {
+                                        alert(OpenLayers.i18n('Select region first'));
+                                    } else {
+                                        // select region knop deactiveren
+                                        var btn_select_region = Ext.getCmp('btn_select_region');
+                                        if (btn_select_region.pressed) {
+                                            btn_select_region.control.box.deactivate();
+                                            map.removeControl(btn_select_region.control);
+                                            btn_select_region.doToggle();
+                                        }
+
+                                        // makesubset process aanroepen
+                                        startProgress(OpenLayers.i18n('makesubset'));
+                                        Ext.Ajax.request({
+                                           url: '/geoserver/ows?', 
+                                           params: {
+                                               service: 'WPS',
+                                               version: '1.1.0',
+                                               request: 'execute',
+                                               identifier: 'py:wildfire_makesubset',
+                                               datainputs: combineParams({
+                                                   userid: Gmi.Session.userid,
+                                                   name: 'test',
+                                                   left: bounds.left,
+                                                   lower: bounds.bottom,
+                                                   right: bounds.right,
+                                                   upper: bounds.top
+                                               }, ';'),
+                                               RawDataOutput: 'string',
+                                               mimeType: 'application/json'
+                                           },
+                                           on_finished: function() {
+                                               not_implemented();
+                                           },
+                                           success: wpsSuccessCallback
+                                        });
+                                    }
+                                }
+                            }
+                        })
                     ]
                 }, { /*
 			xtype: 'fieldset',
@@ -688,7 +813,7 @@ Ext.onReady(function() {
                         xtype: 'fieldset',
                         title: OpenLayers.i18n('Save'),
                         defaults: {
-                            width: 150
+                            width: 'inherited'
                         },
                         items: [
                             {
@@ -699,45 +824,45 @@ Ext.onReady(function() {
                                 tooltip: OpenLayers.i18n('Name of terrain'),
                                 width: 100,
                                 align: 'right',
+                                //allowBlank: false, // must be filled in!
                                 value: OpenLayers.i18n('untitled')
                                 //style: 'padding: 0px;'
                             },
                             //actions["makeLcp"]
                             new Ext.Button({
                                 text: OpenLayers.i18n("Save"),
+                                formBind: true, // If form validation fails disable the button
                                 //xtype: 'button',
                                 tooltip: OpenLayers.i18n("Create landscape file on the base of currently selected region"),
                                 handler: function() {
-                                    /*
-                                     Ext.MessageBox.show({
-                                     msg: 'Model is being initialized (this may take a while)',
-                                     width: 300,
-                                     wait: true,
-                                     waitConfig: {interval: 200}
-                                     });
-                                     */
-                                    var userid = '0';
                                     var terreinid = Ext.getCmp("terrein_id").getValue();
                                     var landscapename = Ext.getCmp("fuelmodel_name").getValue();
-                                    Ext.Ajax.request({
-                                        //url: '../wildfire/pywps/pywps.cgi?service=wps&version=1.0.0&request=execute&identifier=makeLcp&datainputs=[terreinid='+terreinid+';terreinname='+terreinname+']',
-                                        url: '/geoserver/ows?', //service=WPS&request=execute&version=1.0.0&identifier=py:wildfire_makelcp&datainputs=userid=' + userid + ';terreinid=' + terreinid + ';landscapename=' + landscapename + ';&RawDataOutput=string&mimeType=application/json',
-                                        params: {
-                                            service: 'WPS',
-                                            version: '1.1.0',
-                                            request: 'execute',
-                                            identifier: 'py:wildfire_makelcp',
-                                            datainputs: combineParams({
-                                                userid: userid,
-                                                terreinid: terreinid,
-                                                landscapename: landscapename
-                                            }, ';'),
-                                            RawDataOutput: 'string',
-                                            mimeType: 'application/json'
-                                        },
-                                        success: wpsSuccessCallback
-                                    });
-                                }
+                                    if (! terreinid) {
+                                        alert(OpenLayers.i18n('Landscape file cannot be prepared yet.'));
+                                    } else {
+                                        // maak landschap ('lcp') voor model aan
+                                        startProgress(OpenLayers.i18n('makelcp'));
+                                        Ext.Ajax.request({
+                                            //url: '../wildfire/pywps/pywps.cgi?service=wps&version=1.0.0&request=execute&identifier=makeLcp&datainputs=[terreinid='+terreinid+';terreinname='+terreinname+']',
+                                            url: '/geoserver/ows?', //service=WPS&request=execute&version=1.0.0&identifier=py:wildfire_makelcp&datainputs=userid=' + userid + ';terreinid=' + terreinid + ';landscapename=' + landscapename + ';&RawDataOutput=string&mimeType=application/json',
+                                            params: {
+                                                service: 'WPS',
+                                                version: '1.1.0',
+                                                request: 'execute',
+                                                identifier: 'py:wildfire_makelcp',
+                                                datainputs: combineParams({
+                                                    userid: Gmi.Session.userid,
+                                                    terreinid: terreinid,
+                                                    landscapename: landscapename
+                                                }, ';'),
+                                                RawDataOutput: 'string',
+                                                mimeType: 'application/json'
+                                            },
+                                            success: wpsSuccessCallback
+                                        });
+                                    }
+                                },
+                                cls: 'g-actie-knop'
                             })
                         ]
                     }
@@ -785,8 +910,22 @@ Ext.onReady(function() {
                     defaults: {
                         style: 'margin: 5px'
                     },
-                    html: '&lt;todo&gt;',
-                    cls: 'empty'
+                    items: [
+                        {
+                            xtype: 'fieldset',
+                            title: OpenLayers.i18n('Execution'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Start run'),
+                                    handler: startModelRun,
+                                    cls: 'g-actie-knop'
+                                })
+                            ]
+                        }
+                    ]
                 }),
                 new Ext.form.FormPanel({
                     title: 'Step 4 - Outputs',
@@ -924,7 +1063,11 @@ function drawFireLine() {
     not_implemented();
 };
 
-var wpsSuccessCallback = function(response) {
+function startModelRun() {
+    not_implemented();
+};
+
+var wpsSuccessCallback = function(response, request) {
     console.log('wpsSuccessCallback response', response);
     
     var params = JSON.parse(response.responseText);
@@ -953,12 +1096,18 @@ var wpsSuccessCallback = function(response) {
                         //console.log(check_response);
                         var params = JSON.parse(check_response.responseText);
                         if (params.percentage == 100) {
-                            runner.stop(task);
+                            runner.stop(task); 
+                            stopProgress();
                             console.log('wfs taak is klaar');
+                            if (request.on_finished) {
+                                not_implemented();
+                            }
                         } else if (check_response.tId >= 30) {
                             runner.stop(task);
+                            stopProgress();
                             console.log('wfs taak duurde te lang');
                         } else {
+                            updateProgress(check_response.tId, params.percentage);
                             console.log('voortgang', params.percentage);
                         }
                     }
@@ -967,6 +1116,26 @@ var wpsSuccessCallback = function(response) {
         };
         runner.start(task);
     }
+};
+
+function startProgress(message) {
+    Ext.MessageBox.show({
+        title: OpenLayers.i18n('Please wait'),
+        msg: message,
+        progressText: OpenLayers.i18n('Initializing...'),
+        width: 300,
+        progress: true,
+        closable: false
+        //,animEl: 'mb6'
+    });
+};
+
+function updateProgress(perc) {
+    Ext.MessageBox.updateProgress(i, OpenLayers.i18n('${perc}% completed',{perc: Math.round(perc)}));
+};
+
+function stopProgress() {
+    Ext.MessageBox.hide();
 };
 
 function combineParams(o, sep) {
