@@ -17,12 +17,21 @@
         <script type="text/javascript" src="externals/ext-3.4.1/adapter/jquery/ext-jquery-adapter-debug.js"></script>
         -->
         <script type="text/javascript" src="externals/ext-3.4.1/ext-all-debug.js"></script>
+        
+	<!-- Proj resources -->
+	<script type="text/javascript" src="externals/proj4js_combined.js"></script>
+        
         <script type="text/javascript" src="externals/OpenLayers-2.12/OpenLayers.js"></script>
         <script type="text/javascript" src="externals/OpenLayers-2.12/lib/OpenLayers/Lang/nl.js"></script>
         <!-- GeoExt -->
         <script src="externals/GeoExt/lib/GeoExt.js" type="text/javascript"></script>
         <script src="externals/GeoExt/lib/GeoExt/locale/GeoExt-fr.js" type="text/javascript"></script>
         <script src="externals/GeoExt/lib/GeoExt/locale/GeoExt-nl.js" type="text/javascript"></script>
+	<script type="text/javascript">
+        /** Create viewer instance, this is the core of the app **/
+        Proj4js.defs["EPSG:28992"] = "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.9999079  +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.417,50.3319,465.552,-0.398957,0.343988,-1.8774,4.0725 +units=m +no_defs";
+        Proj4js.defs["EPSG:32631"] = "+proj=utm +zone=31 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"; 
+        </script>
         <link rel="stylesheet" type="text/css" href="externals/GeoExt/resources/css/geoext-all.css" />
         <link rel="stylesheet" type="text/css" href="css/natuurbrandmodel.css" />
     </head>
@@ -85,15 +94,18 @@ var TerrainFeatureRecord = new GeoExt.data.FeatureRecord.create([
     {name: 'started', type: 'date'}
 ]);
 
-function weatherTextToRecords(data) {
+function weatherTextToRecords(end_ymd, data) {
     var records = [];
 
     // splits data in regels en verwijder commentaar en lege regels
+    // datum is oplopend gesorteerd
     var lines = data.split('\n').filter(function(line){return line.length > 0 && !line.startsWith('#');});
+    var last_ymd = '00000000';
     for (var i = 0; i < lines.length; i++) {
         var tokens = lines[i].split(/[,\s]+/g).filter(function(token){return token.length > 0;});
         console.log(tokens);
 
+        last_ymd = tokens[1];
         records.push(new WeatherRecord({
             station: tokens[0],
             date: Date.parseDate(tokens[1], 'Ymd'), // convert yyyymmdd to date?
@@ -103,10 +115,17 @@ function weatherTextToRecords(data) {
             hmax: parseFloat(tokens[8])
         }));
     }
+    if (records.length > 0 && end_ymd !== last_ymd) {
+        // voeg laatste record toe met zelfde gegevens behalve datum
+        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, records[records.length-1].data)));
+    }
+    // dag van vandaag toevoegen (indien niet aanwezig)
     return records;
 }
 
-function getClimateData() {
+var climateStations = [];
+
+function getClimateData(station) {
     //var today = Ext.util.Format.date(new Date(), 'Ymd');
     var today = new Date();
     var end_ymd = today.dateFormat('Ymd');
@@ -120,7 +139,7 @@ function getClimateData() {
         url: 'http://www.knmi.nl/klimatologie/daggegevens/getdata_dag.cgi',
         async: false,
         params: {
-            stns: 275,
+            stns: station,
             vars: 'TN:TNH:TX:TXH:UN:UNH:UX:UXH', // station,datum, ...
             start: start_ymd,
             end: end_ymd
@@ -130,7 +149,7 @@ function getClimateData() {
         }
     });
     var text = request.responseText;
-    return weatherTextToRecords(text);
+    return weatherTextToRecords(end_ymd, text);
 };
 
 var weatherColumnModel = new Ext.grid.ColumnModel({
@@ -187,7 +206,11 @@ var weatherStore = new Ext.data.Store({
     sortInfo: { field: "date", direction: "DESC" },
     reader: {
         readRecords: function() {
-            var records = getClimateData();
+            var station = Ext.getCmp('weatherstation'); // naam zit in .lastSelectionText
+            var records = getClimateData(station.value);
+            if (records) {
+                weatherGrid.setTitle(OpenLayers.i18n('Weather characteristics - ${name}', {name: station.lastSelectionText}));
+            }
             return {
                 records: records
             };
@@ -321,21 +344,34 @@ Ext.onReady(function() {
     window.addEventListener('offline', offline, false);
     
     // create a vector layer for drawing
-    var vector = new OpenLayers.Layer.Vector('vector_drawing_layer', {
+    var wildfire_layer = new OpenLayers.Layer.Vector('Wildfire lines', {
         displayInLayerSwitcher: false,
         styleMap: new OpenLayers.StyleMap({
             temporary: OpenLayers.Util.applyDefaults({
-                    pointRadius: 16
+                    pointRadius: 5
                 }, OpenLayers.Feature.Vector.style.temporary),
             'default': OpenLayers.Util.applyDefaults({
-                    pointRadius: 16,
-                    strokeWidth: 3
+                    pointRadius: 5,
+                    strokeWidth: 3,
+                    strokeColor: '#ff0000'
                 }, OpenLayers.Feature.Vector.style['default']),
             select: OpenLayers.Util.applyDefaults({
-                    pointRadius: 16,
+                    pointRadius: 5,
                     strokeWidth: 3
                 }, OpenLayers.Feature.Vector.style.select)
-        })
+        }),
+        eventListeners: {
+            beforefeatureadded: function(event) {
+                // remove other features
+                event.object.removeAllFeatures();
+                return true;
+            },
+            featureadded: function(event) {
+                // event = type, element, feature, object (layer)
+                console.log('featureadded', event.feature);
+            },
+            scope: wildfire_layer
+        }
     });
     // OpenLayers' EditingToolbar internally creates a Navigation control, we
     // want a TouchNavigation control here so we create our own editing toolbar
@@ -348,17 +384,17 @@ Ext.onReady(function() {
         new OpenLayers.Control({
             displayClass: 'olControlNavigation'
         }),
-        new OpenLayers.Control.ModifyFeature(vector, {
+        new OpenLayers.Control.ModifyFeature(wildfire_layer, {
             vertexRenderIntent: 'temporary',
             displayClass: 'olControlModifyFeature'
-        }),/*
-        new OpenLayers.Control.DrawFeature(vector, OpenLayers.Handler.Point, {
+        }),
+        /*new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Point, {
             displayClass: 'olControlDrawFeaturePoint'
         }),*/
-        new OpenLayers.Control.DrawFeature(vector, OpenLayers.Handler.Path, {
+        new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Path, {
             displayClass: 'olControlDrawFeaturePath'
         })/*,
-        new OpenLayers.Control.DrawFeature(vector, OpenLayers.Handler.Polygon, {
+        new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Polygon, {
             displayClass: 'olControlDrawFeaturePolygon'
         })*/
     ]);
@@ -419,7 +455,7 @@ Ext.onReady(function() {
                     singleTile: true,
                     transitionEffect: 'resize'
                 }),
-            vector,
+            wildfire_layer,
             new OpenLayers.Layer.Boxes('_boxes_', {displayInLayerSwitcher: false})
             /*,
             new OpenLayers.Layer.WMS("Tasmania Roads",
@@ -793,6 +829,7 @@ Ext.onReady(function() {
                                             map.removeControl(btn_select_region.control);
                                             btn_select_region.doToggle();
                                         }
+                                        Gmi.Session.box = bounds;
 
                                         // makesubset process aanroepen
                                         startProgress(OpenLayers.i18n('makesubset'));
@@ -912,7 +949,8 @@ Ext.onReady(function() {
                                                 mimeType: 'application/json'
                                             },
                                             on_finished: function(out_params) {
-                                                
+                                                // bewaar id van fuelmodel
+                                                Gmi.Session.fuelid = out_params.runid;
                                             },
                                             success: wpsSuccessCallback,
                                             failure: wpsFailureCallback
@@ -939,6 +977,28 @@ Ext.onReady(function() {
                                 width: 'inherited'
                             },
                             items: [
+                                new Ext.form.ComboBox({
+                                    id: 'weatherstation',
+                                    fieldLabel: 'Weather station',
+                                    name: 'station',
+                                    typeAhead: true,
+                                    triggerAction: 'all',
+                                    lazyRender: true,
+                                    align: 'right',
+                                    mode: 'local',
+                                    value: 275, // default: Deelen
+                                    forceSelection: true, editable: false,
+                                    store: new Ext.data.ArrayStore({
+                                        id: 0,
+                                        fields: [
+                                            'id',
+                                            'naam'
+                                        ],
+                                        data: [[260, 'De Bilt'], [275, 'Deelen'], [283, 'Hupsel'], [375, 'Volkel']]
+                                    }),
+                                    valueField: 'id',
+                                    displayField: 'naam'
+                                }),
                                 new Ext.Button({
                                     text: OpenLayers.i18n('Show weather data'),
                                     handler: showClimateData,
@@ -1121,7 +1181,109 @@ function drawFireLine() {
 };
 
 function startModelRun() {
-    not_implemented();
+    
+    var map = mapPanel.map;
+    if (! map) {
+        alert('Interne fout: map is undefined.'); // internal
+        return;
+    }    
+    
+    // TODO: vuurfront uitlezen ipv middelpunt van box
+    if (! Gmi.Session.box) {
+        alert('Box/Subset is undefined.'); // [Make subset]
+        return;
+    }
+    
+    var t = map.getLayersByName('Wildfire lines');
+    if (t.length === 0) {
+        alert('Interne fout: geen vectorlaag voor vuurlijnen');
+        return;
+    }
+    var wildfire_layer = t[0];
+    if (wildfire_layer.features.length === 0) {
+        alert('Geen vuurfront getekend');
+        return;
+    }
+    var geom = wildfire_layer.features[0].geometry.clone();
+    for (var i = 0; i < geom.components.length; i++) {
+        geom.components[i].transform('EPSG:900913', 'EPSG:28992');
+    }
+    var wkt = geom.toString(); // rd geometry
+    console.log('fire line', wkt);
+    //return;
+/*    
+    var rdbox = Gmi.Session.box.clone().transform('EPSG:900913', 'EPSG:28992');
+    var center = rdbox.getCenterLonLat();
+    //var p = new OpenLayers.Geometry.Point(center.lon, center.lat);
+    var geom = new OpenLayers.Geometry.LineString([new OpenLayers.Geometry.Point(center.lon - 1, center.lat - 1), new OpenLayers.Geometry.Point(center.lon + 1, center.lat + 1)]);
+    var wkt = geom.toString();
+    //var wkt = 'LINESTRING(' + center.lon +' ' + center.lat + ', ' + center.lon +' ' + center.lat + ')';
+*/
+    if (! Gmi.Session.fuelid) {
+        alert('Fuel model is undefined.'); // [Save]
+        return;
+    }
+    
+    // weather/wind data
+    
+    // startRun process aanroepen
+    // Let op: 
+    startProgress(OpenLayers.i18n('startRun'));
+    Ext.Ajax.request({
+        url: '/geoserver/ows?', 
+        params: {
+            service: 'WPS',
+            version: '1.1.0',
+            request: 'execute',
+            identifier: 'py:wildfire_startRun',
+            datainputs: combineParams({
+                userid: Gmi.Session.userid,
+                name: 'test brand', // naam van brand
+                fuelmodel: Gmi.Session.fuelid, // runid van fuelmodel (resultaat van makelcp)
+                geom: wkt, // wkt LINESTRING(x y, ...) RD projectie
+                // wind: (month,day,hour,speed,dir,cl), etc (6 uren)
+                windstring: '(5,16,1508,00,180,10),(5,16,1608,00,180,10),(5,16,1708,00,180,10),(5,16,1808,00,180,10),(5,16,1908,00,180,10),(5,17,2008,00,180,10)', 
+                // windstring=(5,16,1508,00,180,10),(5,16,1608,00,180,10),(5,16,1708,00,180,10),(5,16,1808,00,180,10),(5,16,1908,00,180,10),(5,16,2008,00,180,10);
+                // weather: (month,day,rn,am,pm,tlo,thi,hhi,hlo,elv), etc (6 dagen)
+                weatherstring: '(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000)', 
+                // weatherstring=(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000);
+                // startmonth=05;startday=16;starthour=1508;
+                startmonth: '05', // 0-padded
+                startday: '16', // 0-padded, laatste dag van weather/wind-string
+                starthour: '1508' // hhmm
+            }, ';'),
+            RawDataOutput: 'string',
+            mimeType: 'application/json'
+        },
+        on_finished: function(out_params) {
+            // toevoegen van kaartlaag met naam als model_wildfire:result_1769
+            // bewaar runid als terreinid
+            Gmi.Session.fireid = out_params.runid;
+            // verwijdere oude terreinen
+            var layers = map.getLayersByName('Brandverspreiding');
+            var name = 'model_wildfire:result_' + out_params.runid;
+            if (layers.length > 0) {
+                // pas huidige resultaat aan
+                layers[0].mergeNewParams({
+                    layers: name
+                });
+            } else {
+                // voeg nieuwe resultaat toe
+                var layer = new OpenLayers.Layer.WMS('Brandverspreiding', 
+                'http://model.geodan.nl/geoserver/wms?', {
+                    layers: name,
+                    transparent: true,
+                    format: 'image/png'
+                }, {
+                    isBaseLayer: false,
+                    opacity: 0.6
+                });
+                map.addLayer(layer);
+           }
+       },
+       success: wpsSuccessCallback,
+       failure: wpsFailureCallback
+    });
 };
 
 var wpsFailureCallback = function(response, options) {
@@ -1156,8 +1318,14 @@ var wpsSuccessCallback = function(response, options) {
                         }, ';')
                     },
                     success: function(check_response) {
+                        var params = {};
                         //console.log(check_response);
-                        var params = JSON.parse(check_response.responseText);
+                        try {
+                            params = JSON.parse(check_response.responseText);
+                        } catch (err) {
+                            params.status = 'error';
+                            params.lastMessage = check_response.responseText;
+                        }
                         if (params.status === 'error') {
                             runner.stop(task); 
                             stopProgress();
@@ -1172,13 +1340,14 @@ var wpsSuccessCallback = function(response, options) {
                             } else {
                                 alert(OpenLayers.i18n('Process is ready; results are ignored'));
                             }
-                        } else if (check_response.tId >= 60) {
+                        } else if (check_response.tId >= 120) {
                             runner.stop(task);
                             stopProgress();
                             console.log('wfs taak duurde te lang', params);
+                            alert(OpenLayers.i18n('Process takes too long; aborted'));
                         } else {
                             updateProgress(check_response.tId, params.percentage);
-                            console.log('voortgang', params);
+                            console.log('voortgang', check_response.tId, params);
                         }
                     },
                     failure: function() {

@@ -10,3 +10,12 @@
     width: 100%
 }
 
+/* volgende 2 zijn nodig voor modifyfeature in editing toolbar */
+.olControlEditingToolbar .olControlModifyFeatureItemInactive { 
+    background-position: -1px -1px;
+}
+
+.olControlEditingToolbar .olControlModifyFeatureItemActive { 
+    background-position: -1px -24px;
+}
+
