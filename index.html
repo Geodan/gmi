@@ -46,6 +46,7 @@ Gmi.Settings.openLayers_proxyHost = 'proxy.php?url=';
 Gmi.Settings.maxArea = 10000 * 10000; // m2; 10 bij 10 km, 100 km2
 Gmi.Settings.tijd_afronding_minuten = 5;
 Gmi.Settings.operationalMode = 1;
+Gmi.Settings.dateFormat = 'Y-m-d';
 
 Gmi.Session.userid = '0';
 
@@ -85,10 +86,22 @@ Gmi.Services.WPS = {
 var WeatherRecord = new Ext.data.Record.create([
     { name: 'station', type: 'int'},
     { name: 'date', type: 'date'},
+    { name: 'precipitation', type: 'float'},
+    { name: 'hour1', type: 'int'},
+    { name: 'hour2', type: 'int'},
     { name: 'tmin', type: 'float'},
     { name: 'tmax', type: 'float'},
     { name: 'hmin', type: 'float'},
     { name: 'hmax', type: 'float'}
+]);
+
+var WindRecord = new Ext.data.Record.create([
+    { name: 'station', type: 'int'},
+    { name: 'date', type: 'date'},
+    { name: 'time', type: 'string'}, // hhmm
+    { name: 'speed', type: 'float'}, // km/h farsite, km/s gebruiker
+    { name: 'direction', type: 'float'}, // degrees
+    { name: 'cloudiness', type: 'float'} // percentage
 ]);
 
 var TerrainFeatureRecord = new GeoExt.data.FeatureRecord.create([
@@ -112,9 +125,12 @@ function weatherTextToRecords(end_ymd, data) {
             station: tokens[0],
             date: Date.parseDate(tokens[1], 'Ymd'), // convert yyyymmdd to date?
             tmin: parseFloat(tokens[2])/10,
+            hour1: parseInt(tokens[3]),
             tmax: parseFloat(tokens[4])/10,
+            hour2: parseInt(tokens[5]),
             hmin: parseFloat(tokens[6]),
-            hmax: parseFloat(tokens[8])
+            hmax: parseFloat(tokens[8]),
+            precipitation: Math.max(0, parseFloat(tokens[9])) * 10
         }));
     }
     if (records.length > 0 && end_ymd !== last_ymd) {
@@ -140,13 +156,13 @@ function getClimateData(station) {
     
     // NB: proxy nodig voor direct ophalen
     //Ext.Ajax.request({
-    var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur
+    var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur, etmaalsom neerslag
     var request = OpenLayers.Request.GET({
         url: 'http://www.knmi.nl/klimatologie/daggegevens/getdata_dag.cgi',
-        async: false,
+        async: false, // synchroon opvragen
         params: {
             stns: station,
-            vars: 'TN:TNH:TX:TXH:UN:UNH:UX:UXH', // station,datum, ...
+            vars: 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH', // station,datum, ...
             start: start_ymd,
             end: end_ymd
         },
@@ -158,7 +174,99 @@ function getClimateData(station) {
     return weatherTextToRecords(end_ymd, text);
 };
 
+function getWindData(station) {
+    var model_datetime = getModelDateTime();
+    
+    var records = [];
+    records.push(new WindRecord({
+        station: station,
+        date: model_datetime,
+        time: zpad(model_datetime.getHours()) + '00',
+        speed: 1,
+        direction: 0,
+        cloudiness: 0
+    }));
+    var tomorrow = new Date(model_datetime);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    records.push(new WindRecord({
+        station: station,
+        date: tomorrow,
+        time: zpad(model_datetime.getHours()) + '00',
+        speed: 1,
+        direction: 0,
+        cloudiness: 0
+    }));
+    return records;
+};
+
 var weatherColumnModel = new Ext.grid.ColumnModel({
+    defaults: {
+        sortable: true, // columns are not sortable by default
+        width: 100,
+        align: 'right',
+        format: '000.0',
+        editable: true,
+        xtype: 'numbercolumn'
+    },
+    columns: [
+    {
+        header: 'Station',
+        dataIndex: 'station',
+        hidden: true,
+        format: '000'
+        /*{
+        editor: new Ext.form.DateField({  // rules about editing
+                format: 'Y-m-d',
+                allowBlank: false,
+                maxLength: 10
+        })*/
+    }, {
+        header: 'Date',
+        dataIndex: 'date',
+        width: 100,
+        align: 'right',
+        format: Gmi.Settings.dateFormat,
+        xtype: 'datecolumn'
+    }, {
+        header: 'Tmin',
+        format: '00.0',
+        editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
+        dataIndex: 'tmin'
+    }, {
+        header: 'Tmax',
+        format: '00.0',
+        editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
+        dataIndex: 'tmax'
+    }, {
+        header: 'RVmin',
+        format: '000',
+        editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
+        dataIndex: 'hmin'
+    }, {
+        header: 'RVmax',
+        format: '000',
+        editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
+        dataIndex: 'hmax'
+    }]
+});
+
+var windColumnModel = new Ext.grid.ColumnModel({
     defaults: {
         sortable: true, // columns are not sortable by default
         width: 100,
@@ -184,24 +292,30 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
         dataIndex: 'date',
         width: 100,
         align: 'right',
-        format: 'Y-m-d',
+        format: Gmi.Settings.dateFormat,
         xtype: 'datecolumn'
     }, {
-        header: 'Tmin',
+        header: 'Time',
+        dataIndex: 'time',
+        format: 'H:i',
+        align: 'right',
+        editable: true,
+        xtype: 'datecolumn'
+    }, {
+        header: 'Speed',
         format: '00.0',
-        dataIndex: 'tmin'
+        editable: true,
+        dataIndex: 'speed'
     }, {
-        header: 'Tmax',
-        format: '00.0',
-        dataIndex: 'tmax'
-    }, {
-        header: 'RVmin',
+        header: 'Direction',
         format: '000',
-        dataIndex: 'hmin'
+        editable: true,
+        dataIndex: 'direction'
     }, {
-        header: 'RVmax',
+        header: 'Cloudiness',
         format: '000',
-        dataIndex: 'hmax'
+        editable: true,
+        dataIndex: 'cloudiness'
     }]
 });
 
@@ -221,6 +335,26 @@ var weatherStore = new Ext.data.Store({
                 records: records
             };
         }
+    },
+    writer: new Ext.data.JsonWriter({
+        encode: true,
+        writeAllFields: false
+    })
+});
+
+var windStore = new Ext.data.Store({
+    id: 'windStore',
+    autoSave: false,
+    recordType: WindRecord,
+    sortInfo: { field: 'time', direction: 'ASC' },
+    reader: {
+        readRecords: function() {
+            var station = Ext.getCmp('weatherstation');
+            var records = getWindData(station.value);
+            return {
+                records: records
+            };
+        }
     }
 });
 
@@ -229,6 +363,13 @@ var weatherGrid = new Ext.grid.GridPanel({
     title: OpenLayers.i18n('Weather characteristics'),
     store: weatherStore,
     cm: weatherColumnModel
+});
+
+var windGrid = new Ext.grid.GridPanel({
+    id: 'windgrid',
+    title: OpenLayers.i18n('Wind characteristics'),
+    store: windStore,
+    cm: windColumnModel
 });
 
 var weathersettingsWindow = new Ext.Window({
@@ -248,7 +389,10 @@ var weathersettingsWindow = new Ext.Window({
     plain: true,
     layout: 'fit', // fit grid in window
     //modal: false,
-    items: [weatherGrid],//, windGrid],
+    defaults: {
+        height: 100
+    },
+    items: [weatherGrid, windGrid],
     buttons:[{
         text: OpenLayers.i18n('Close'), 
         handler: function() {
@@ -261,6 +405,7 @@ weathersettingsWindow.hide();
 function showClimateData() {
     weathersettingsWindow.show();
     weatherStore.loadData();
+    windStore.loadData();
 };
 
 // overig
@@ -492,7 +637,10 @@ Ext.onReady(function() {
     mapPanel.map.addControl(panel);
     
     // create our own layer node UI class, using the TreeNodeUIEventMixin
-    var LayerNodeUI = Ext.extend(GeoExt.tree.LayerNodeUI, new GeoExt.tree.TreeNodeUIEventMixin());
+    var LayerNodeUI = Ext.extend(
+        GeoExt.tree.LayerNodeUI, 
+        new GeoExt.tree.TreeNodeUIEventMixin()
+    );
     var treeConfig = [{
         nodeType: "gx_baselayercontainer",
         expanded: true
@@ -536,7 +684,9 @@ Ext.onReady(function() {
                         alert(OpenLayers.i18n("${layerName} is now the active layer.", {layerName: node.text}));
                     }
                 }
-            })
+            })/* plus */, {
+                ptype: "gx_treenodecomponent"
+            } /* */
         ],
         loader: new Ext.tree.TreeLoader({
             // applyLoader has to be set to false to not interfere with loaders
@@ -548,13 +698,34 @@ Ext.onReady(function() {
         }),
         root: {
             nodeType: "async",
+            /* of niet async van begin *
+            nodeType: "gx_layercontainer",
+            /*loader: {
+                baseAttrs: {
+                    uiProvider: "layernodeui"//custom_ui"
+                },
+                createNode: function(attr) {
+                    // add a WMS legend to each node created
+                    attr.component = {
+                        xtype: "gx_wmslegend",
+                        layerRecord: mapPanel.layers.getByLayer(attr.layer),
+                        showTitle: false,
+                        // custom class for css positioning
+                        // see tree-legend.html
+                        cls: "legend"
+                    }
+                    return GeoExt.tree.LayerLoader.prototype.createNode.call(this, attr);
+                },
+                load: function() { // blijkbaar nodig indien niet async
+                    console.log('load', arguments);
+                }
+            }, /* tot einde hier */
             // the children property of an Ext.tree.AsyncTreeNode is used to
             // provide an initial set of layer nodes. We use the treeConfig
             // from above, that we created with OpenLayers.Format.JSON.write.
             //children: Ext.decode(treeConfig)
             // Don't use the line above in your application. Instead, use
             children: treeConfig
-            
         },
         listeners: {
             "radiochange": function(node){
@@ -665,6 +836,10 @@ Ext.onReady(function() {
                     // zetten van model_date en model_time
                     setModelDateTime(datetime);
                     
+                    // terrein laag (landscape_id) zetten? makkelijker bij testen
+                    toonTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
+                    
+                    // tijd van neerslagradar
                     time = new Date(datetime.getTime() - datetime.getTime() % (5*60*1000)); // round to 5 minutes
                     console.log('tijd afgerond', time);
                     var map = row.data.feature.layer.map;
@@ -871,32 +1046,12 @@ Ext.onReady(function() {
                                                 RawDataOutput: 'string',
                                                 mimeType: 'application/json'
                                             },
+                                            extraParams: {
+                                                count: 0
+                                            },
                                             on_finished: function(out_params) {
-                                                // bewaar runid als terreinid
-                                                Gmi.Session.terreinid = out_params.runid;
-                                                // verwijdere oude terreinen
-                                                var layers = map.getLayersByName('Terrein');
-                                                /*for (var i = layers.length - 1; i >= 0; i--) {
-                                                    map.removeLayer(layers[i]);
-                                                }*/
-                                                // voeg nieuwe terrein toe
-                                                var name = 'model_wildfire:terrein_' + out_params.runid;
-                                                if (layers.length > 0) {
-                                                    layers[0].mergeNewParams({
-                                                        layers: name
-                                                    });
-                                                } else {
-                                                    var layer = new OpenLayers.Layer.WMS('Terrein', 
-                                                    'http://model.geodan.nl/geoserver/wms?', {
-                                                        layers: name,
-                                                        transparent: true,
-                                                        format: 'image/png'
-                                                    }, {
-                                                        isBaseLayer: false,
-                                                        opacity: 0.6
-                                                    });
-                                                    map.addLayer(layer);
-                                               }
+                                                // toon terrein laag
+                                                showTerrein(map, out_params.runid);
                                            },
                                            success: wpsSuccessCallback,
                                            failure: wpsFailureCallback
@@ -968,6 +1123,9 @@ Ext.onReady(function() {
                                                 RawDataOutput: 'string',
                                                 mimeType: 'application/json'
                                             },
+                                            extraParams: {
+                                                count: 0
+                                            },
                                             on_finished: function(out_params) {
                                                 // bewaar id van fuelmodel
                                                 Gmi.Session.fuelid = out_params.runid;
@@ -1002,7 +1160,7 @@ Ext.onReady(function() {
                                     id: 'model_date',
                                     fieldLabel: OpenLayers.i18n('Date'),
                                     anchor: '100%',
-                                    format: 'd-m-Y',
+                                    format: Gmi.Settings.dateFormat,
                                     forceSelection: true, editable: false
                                 },
                                 {
@@ -1194,13 +1352,13 @@ Ext.onReady(function() {
                                     xtype: 'datefield',
                                     fieldLabel: 'Begintijd',
                                     width: 'auto',
-                                    format: 'd-m-Y'
+                                    format: Gmi.Settings.dateFormat
                                 }
                                 , {
                                     xtype: 'datefield',
                                     fieldLabel: 'Eindtijd',
                                     width: 'auto',
-                                    format: 'd-m-Y'
+                                    format: Gmi.Settings.dateFormat
                                 }
                             ]
                         }
@@ -1248,8 +1406,12 @@ Ext.onReady(function() {
     runner.start(task);
 });
 
-function zpad(i) {
-    return (i < 10 ? '0' : '') + i;
+function zpad(i, width) {
+    var s = Math.round(i) + '';
+    while (s.length < width) {
+        s = '0' + s;
+    }
+    return s;
 };
 
 function setModelDateTime(datetime) {
@@ -1258,6 +1420,95 @@ function setModelDateTime(datetime) {
     var m = datetime.getMinutes();
     var time = zpad(h) + zpad(m); // ':' niet nodig?
     Ext.getCmp('model_time').setValue(time);
+};
+
+function getModelDateTime() {
+    var model_date = Ext.getCmp('model_date').getValue();
+    var model_time = Ext.getCmp('model_time').getValue();
+    model_date.setHours(model_time.split(':')[0]);
+    model_date.setMinutes(model_time.split(':')[1]);
+    return model_date;
+};
+
+function toonTerrein(map, terrein_id) {
+    // bewaar runid als terreinid
+    Gmi.Session.terreinid = terrein_id;
+    // verwijdere oude terreinen
+    var layers = map.getLayersByName('Terrein');
+    /*for (var i = layers.length - 1; i >= 0; i--) {
+        map.removeLayer(layers[i]);
+    }*/
+    // voeg nieuwe terrein toe
+    var name = 'model_wildfire:terrein_' + terrein_id;
+    if (layers.length > 0) {
+        layers[0].mergeNewParams({
+            layers: name
+        });
+    } else {
+        var layer = new OpenLayers.Layer.WMS('Terrein', 
+        'http://model.geodan.nl/geoserver/wms?', {
+            layers: name,
+            transparent: true,
+            format: 'image/png'
+        }, {
+            isBaseLayer: false,
+            opacity: 0.6
+        });
+        map.addLayer(layer);
+   }
+};
+
+function weatherStoreAsString() {
+    weatherStore.sort('date', 'asc');
+    var weatherData = weatherStore.getRange();
+                // weather: (month,day,precip,hour1,hour2,tlo,thi,hhi,hlo,elv), etc (6 dagen)
+                //weatherstring: '(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000)', 
+
+    var weatherString = '';
+    for (var i = 0; i < weatherData.length; i++) {                     
+        month = zpad(weatherData[i].data.date.getMonth() + 1, 2);
+        day = zpad(weatherData[i].data.date.getDate(), 2);
+        rn = zpad(weatherData[i].data.precipitation, 2);
+        am = zpad(weatherData[i].data.hour1, 4);
+        pm = zpad(weatherData[i].data.hour2, 4);
+        tlo = zpad(weatherData[i].data.tmin, 2);
+        thi = zpad(weatherData[i].data.tmax, 2);
+        hhi = zpad(weatherData[i].data.hmax, 2);
+        hlo = zpad(weatherData[i].data.hmin, 2);
+        elv = '0000';
+        weatherString += '(' + month + ',' + day  + ',' + rn + ',' 
+            + am + ',' + pm +',' + tlo +',' + thi +',' + hhi +',' + hlo +',' + elv +')';
+        if (i < weatherData.length - 1) { 
+            weatherString += ',';
+        }
+    }
+    console.log('weatherString', weatherString);
+    return weatherString;
+};
+
+function windStoreAsString() {
+                // wind: (month,day,hour,speed,dir,cl), etc (6 uren)
+                //windstring: '(5,16,1508,00,180,10),(5,16,1608,00,180,10),(5,16,1708,00,180,10),(5,16,1808,00,180,10),(5,16,1908,00,180,10),(5,17,2008,00,180,10)', 
+    windStore.sort('date', 'asc');
+    var windData = windStore.getRange();
+
+    var windString = '' ;
+    for (var i = 0; i < windData.length; i++) {
+        month = windData[i].data.date.getMonth() + 1;
+        day = windData[i].data.date.getDate();
+        hour = windData[i].data.time;
+        hour = hour.replace(':', '');
+        hour = hour.substr(0, 4);
+        speed = zpad(windData[i].data.speed * 3.6, 2); // van m/s naar km/h
+        dir = zpad(windData[i].data.direction, 3);
+        cl = zpad(windData[i].data.cloudiness, 2);
+        windString += '(' + month + ',' + day  + ',' + hour + ',' + speed + ',' + dir + ',' + cl +')';
+        if (i < windData.length - 1) {
+            windString += ',';
+        }
+    }
+    console.log('windString', windString);
+    return windString;
 };
 
 function drawFireLine() {
@@ -1270,7 +1521,7 @@ function startModelRun() {
     if (! map) {
         alert('Interne fout: map is undefined.'); // internal
         return;
-    }    
+    }
     
     // TODO: vuurfront uitlezen ipv middelpunt van box
     if (! Gmi.Session.box) {
@@ -1316,7 +1567,8 @@ function startModelRun() {
         alert('Tijd onbekend');
         return;
     }
-        
+    var model_datetime = getModelDateTime();
+    
     // startRun process aanroepen
     // Let op: 
     startProgress(OpenLayers.i18n('startRun'));
@@ -1333,18 +1585,21 @@ function startModelRun() {
                 fuelmodel: Gmi.Session.fuelid, // runid van fuelmodel (resultaat van makelcp)
                 geom: wkt, // wkt LINESTRING(x y, ...) RD projectie
                 // wind: (month,day,hour,speed,dir,cl), etc (6 uren)
-                windstring: '(5,16,1508,00,180,10),(5,16,1608,00,180,10),(5,16,1708,00,180,10),(5,16,1808,00,180,10),(5,16,1908,00,180,10),(5,17,2008,00,180,10)', 
+                windstring: windStoreAsString(),
                 // windstring=(5,16,1508,00,180,10),(5,16,1608,00,180,10),(5,16,1708,00,180,10),(5,16,1808,00,180,10),(5,16,1908,00,180,10),(5,16,2008,00,180,10);
-                // weather: (month,day,rn,am,pm,tlo,thi,hhi,hlo,elv), etc (6 dagen)
-                weatherstring: '(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000)', 
+                // weather: (month,day,precip,hour1,hour2,tlo,thi,hhi,hlo,elv), etc (6 dagen)
+                weatherstring: weatherStoreAsString(),
                 // weatherstring=(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000);
                 // startmonth=05;startday=16;starthour=1508;
-                startmonth: '05', // 0-padded
-                startday: '16', // 0-padded, laatste dag van weather/wind-string
+                startmonth: zpad(model_datetime.getMonth()), // 0-padded
+                startday: zpad(model_datetime.getDate()), // 0-padded, laatste dag van weather/wind-string
                 starthour: hhmm // hhmm
             }, ';'),
             RawDataOutput: 'string',
             mimeType: 'application/json'
+        },
+        extraParams: {
+            count: 0
         },
         on_finished: function(out_params) {
             // toevoegen van kaartlaag met naam als model_wildfire:result_1769
@@ -1383,17 +1638,19 @@ var wpsFailureCallback = function(response, options) {
 };
 
 var wpsSuccessCallback = function(response, options) {
-    console.log('wpsSuccessCallback response', response);
+    console.log('wpsSuccessCallback response', response, options);
     
     var params = JSON.parse(response.responseText);
     var activerunid = params.runid;
     // statussen: scheduled, running, error, finished
     if (params.status === 'scheduled') {
         var runner = new Ext.util.TaskRunner();
+        var count = options.extraParams.count + 1;
         // bij een 'scheduled' process moet voortgang gecontroleerd worden
         var task = {
             interval: 1000, // 1 seconde
             run: function() {
+                count = count + 1;
                 //Ext.fly('clock').update(new Date().format('g:i:s A'));
                 Ext.Ajax.request({
                     url:'/geoserver/ows?',//service=WPS&request=execute&version=1.0.0&identifier=py:checkModelStatus&datainputs=runid='+activerunid+';&RawDataOutput=string=mimeType="application/json"',
@@ -1408,7 +1665,10 @@ var wpsSuccessCallback = function(response, options) {
                             runid: activerunid
                         }, ';')
                     },
-                    success: function(check_response) {
+                    extraParams: {
+                        count: count
+                    },
+                    success: function(check_response, c_options) {
                         var params = {};
                         //console.log(check_response);
                         try {
@@ -1431,14 +1691,14 @@ var wpsSuccessCallback = function(response, options) {
                             } else {
                                 alert(OpenLayers.i18n('Process is ready; results are ignored'));
                             }
-                        } else if (check_response.tId >= 120) {
+                        } else if (c_options.extraParams.count >= 120) {
                             runner.stop(task);
                             stopProgress();
                             console.log('wfs taak duurde te lang', params);
                             alert(OpenLayers.i18n('Process takes too long; aborted'));
                         } else {
-                            updateProgress(check_response.tId, params.percentage);
-                            console.log('voortgang', check_response.tId, params);
+                            updateProgress(c_options.extraParams.count, params.percentage);
+                            console.log('voortgang', c_options.extraParams.count, params);
                         }
                     },
                     failure: function() {
