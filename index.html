@@ -305,16 +305,28 @@ var windColumnModel = new Ext.grid.ColumnModel({
         header: 'Speed',
         format: '00.0',
         editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
         dataIndex: 'speed'
     }, {
         header: 'Direction',
         format: '000',
         editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
         dataIndex: 'direction'
     }, {
         header: 'Cloudiness',
         format: '000',
         editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3
+        }),
         dataIndex: 'cloudiness'
     }]
 });
@@ -355,20 +367,26 @@ var windStore = new Ext.data.Store({
                 records: records
             };
         }
-    }
+    },
+    writer: new Ext.data.JsonWriter({
+        encode: true,
+        writeAllFields: false
+    })
 });
 
-var weatherGrid = new Ext.grid.GridPanel({
+var weatherGrid = new Ext.grid.EditorGridPanel({
     id: 'weathergrid',
     title: OpenLayers.i18n('Weather characteristics'),
     store: weatherStore,
+    clicksToEdit: 1,
     cm: weatherColumnModel
 });
 
-var windGrid = new Ext.grid.GridPanel({
+var windGrid = new Ext.grid.EditorGridPanel({
     id: 'windgrid',
     title: OpenLayers.i18n('Wind characteristics'),
     store: windStore,
+    clicksToEdit: 1,
     cm: windColumnModel
 });
 
@@ -405,7 +423,9 @@ weathersettingsWindow.hide();
 function showClimateData() {
     weathersettingsWindow.show();
     weatherStore.loadData();
+    weatherGrid.startEditing(0, 0);
     windStore.loadData();
+    windGrid.startEditing(0, 0);
 };
 
 // overig
