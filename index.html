@@ -44,6 +44,8 @@ Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Services.WPS')
 Gmi.Settings.openLayers_imgPath = 'img/';
 Gmi.Settings.openLayers_proxyHost = 'proxy.php?url=';
 Gmi.Settings.maxArea = 10000 * 10000; // m2; 10 bij 10 km, 100 km2
+Gmi.Settings.tijd_afronding_minuten = 5;
+Gmi.Settings.operationalMode = 1;
 
 Gmi.Session.userid = '0';
 
@@ -127,11 +129,15 @@ var climateStations = [];
 
 function getClimateData(station) {
     //var today = Ext.util.Format.date(new Date(), 'Ymd');
-    var today = new Date();
-    var end_ymd = today.dateFormat('Ymd');
-    var start = new Date(today);
-    start.setDate(today.getDate() - 5);
+    var end = Ext.getCmp('model_date').getValue();
+    var end_ymd = end.dateFormat('Ymd');
+    
+    var start = new Date(end);
+    start.setDate(end.getDate() - 5);
     var start_ymd = start.dateFormat('Ymd');
+    
+    var today = new Date();
+    
     // NB: proxy nodig voor direct ophalen
     //Ext.Ajax.request({
     var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur
@@ -376,7 +382,16 @@ Ext.onReady(function() {
     // OpenLayers' EditingToolbar internally creates a Navigation control, we
     // want a TouchNavigation control here so we create our own editing toolbar
     var toolbar = new OpenLayers.Control.Panel({
-        displayClass: 'olControlEditingToolbar'
+        displayClass: 'olControlEditingToolbar',
+        activateControl: function(c) {
+            console.log('activate control', c);
+            if (c.CLASS_NAME === 'OpenLayers.Control.ModifyFeature') {
+                if (c.layer.features.length > 0) {
+                    c.selectFeature(c.layer.features[0]);
+                }
+            }
+            return OpenLayers.Control.Panel.prototype.activateControl.apply(this, [c]);
+        }
     });
     toolbar.addControls([
         // this control is just there to be able to deactivate the drawing
@@ -645,8 +660,12 @@ Ext.onReady(function() {
                     var center = row.data.feature.geometry.getCentroid();
                     mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
                     
-                    var time = new Date(row.data.feature.attributes['started']);
-                    time = new Date(time.getTime() - time.getTime() % (5*60*1000)); // round to 5 minutes
+                    var datetime = new Date(row.data.feature.attributes['started']);
+                    
+                    // zetten van model_date en model_time
+                    setModelDateTime(datetime);
+                    
+                    time = new Date(datetime.getTime() - datetime.getTime() % (5*60*1000)); // round to 5 minutes
                     console.log('tijd afgerond', time);
                     var map = row.data.feature.layer.map;
                     var layers = map.getLayersByName('KNMI Neerslagradar');
@@ -678,7 +697,7 @@ Ext.onReady(function() {
             collapseMode: "mini",
             autoScroll: true,
             split: true,
-            width: 200,
+            width: 250,
             layout: 'auto',
             items: [
     new Ext.form.FormPanel({
@@ -759,7 +778,8 @@ Ext.onReady(function() {
                                             // before Control.MouseDefault gets to see it
                                             this.box = new OpenLayers.Handler.Box( control,
                                                 {"done": this.notice},
-                                                {keyMask: OpenLayers.Handler.MOD_SHIFT}
+                                                //{"move": function(){ console.log('move')}}, // voor .Drag
+                                                {keyMaskX: OpenLayers.Handler.MOD_SHIFT}
                                             );
                                             this.box.activate();
                                         },
@@ -972,6 +992,35 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
+                            title: OpenLayers.i18n('Date & time'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [
+                                {
+                                    xtype: 'datefield',
+                                    id: 'model_date',
+                                    fieldLabel: OpenLayers.i18n('Date'),
+                                    anchor: '100%',
+                                    format: 'd-m-Y',
+                                    forceSelection: true, editable: false
+                                },
+                                {
+                                    xtype: 'timefield',
+                                    id: 'model_time',
+                                    fieldLabel: OpenLayers.i18n("Time"),
+                                    anchor: '100%',
+                                    forceSelection: true, editable: false,
+                                    //minValue   : '09:00',
+                                    //maxValue   : '18:00',
+                                    increment: Gmi.Settings.tijd_afronding_minuten,
+                                    format: 'H:i'
+                                    //,value: '14:00'
+                                }
+                            ]
+                        },
+                        {
+                            xtype: 'fieldset',
                             title: OpenLayers.i18n('Weather data'),
                             defaults: {
                                 width: 'inherited'
@@ -984,6 +1033,7 @@ Ext.onReady(function() {
                                     typeAhead: true,
                                     triggerAction: 'all',
                                     lazyRender: true,
+                                    anchor: '100%',
                                     align: 'right',
                                     mode: 'local',
                                     value: 275, // default: Deelen
@@ -1174,7 +1224,41 @@ Ext.onReady(function() {
         win.show(this);
     });
 
+
+    // tijd task
+    var prev_minutes = -1;
+    var task = {
+        run: function(){
+            var today = new Date();
+            var h=today.getHours();
+            var m=today.getMinutes();
+            var m_floor = Math.floor(m/Gmi.Settings.tijd_afronding_minuten)*Gmi.Settings.tijd_afronding_minuten;
+            if (m_floor !== prev_minutes) {
+                // set date (todo: alleen indien veranderd)
+                Ext.getCmp('model_date').setValue(today);
+                // tijd in formulier aanpassen
+                console.log(today.toLocaleTimeString());
+                Ext.getCmp('model_time').setValue( zpad(h) + ':' + zpad(m_floor) );
+                prev_minutes = m_floor;
+            }
+        },
+        interval: 15000 // every 15 seconds
+    };
+    var runner = new Ext.util.TaskRunner();
+    runner.start(task);
 });
+
+function zpad(i) {
+    return (i < 10 ? '0' : '') + i;
+};
+
+function setModelDateTime(datetime) {
+    Ext.getCmp('model_date').setValue(datetime);
+    var h = datetime.getHours();
+    var m = datetime.getMinutes();
+    var time = zpad(h) + zpad(m); // ':' niet nodig?
+    Ext.getCmp('model_time').setValue(time);
+};
 
 function drawFireLine() {
     not_implemented();
@@ -1225,7 +1309,14 @@ function startModelRun() {
     }
     
     // weather/wind data
-    
+
+    // tijd
+    var hhmm = Ext.getCmp('model_time').value.replace(':', '');
+    if (! hhmm) {
+        alert('Tijd onbekend');
+        return;
+    }
+        
     // startRun process aanroepen
     // Let op: 
     startProgress(OpenLayers.i18n('startRun'));
@@ -1250,7 +1341,7 @@ function startModelRun() {
                 // startmonth=05;startday=16;starthour=1508;
                 startmonth: '05', // 0-padded
                 startday: '16', // 0-padded, laatste dag van weather/wind-string
-                starthour: '1508' // hhmm
+                starthour: hhmm // hhmm
             }, ';'),
             RawDataOutput: 'string',
             mimeType: 'application/json'
