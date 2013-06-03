@@ -41,10 +41,10 @@
         </script>
         <script type="text/javascript">
 if (typeof String.prototype.startsWith !== 'function') {
-  // needed for Chrome browser
-  String.prototype.startsWith = function (str){
-    return this.slice(0, str.length) === str;
-  };
+    // needed for Chrome browser
+    String.prototype.startsWith = function (str){
+        return this.slice(0, str.length) === str;
+    };
 }
         </script>
         <link rel="stylesheet" type="text/css" href="externals/GeoExt/resources/css/geoext-all.css" />
@@ -65,6 +65,7 @@ Gmi.Settings.dateFormat = 'Y-m-d';
 Gmi.Settings.decimalSeparator = ',';
 
 Gmi.Session.userid = '0';
+Gmi.Version = '0.1';
 
 OpenLayers.imgPath = Gmi.Settings.openLayers_imgPath;
 OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
@@ -91,7 +92,7 @@ Gmi.Services.WPS = {
                 }, ';'),
                 RawDataOutput: 'string',
                 mimeType: 'application/json'
-            },
+            }
         }, options);
         Ext.Ajax.Request(config);
     }
@@ -107,8 +108,8 @@ var WeatherRecord = new Ext.data.Record.create([
     { name: 'hour2', type: 'int'},
     { name: 'tmin', type: 'float'},
     { name: 'tmax', type: 'float'},
-    { name: 'hmin', type: 'float'},
-    { name: 'hmax', type: 'float'}
+    { name: 'hmin', type: 'float'}, // max. 99 in model
+    { name: 'hmax', type: 'float'} // max. 99 in farsite model
 ]);
 
 var WindRecord = new Ext.data.Record.create([
@@ -124,6 +125,14 @@ var TerrainFeatureRecord = new GeoExt.data.FeatureRecord.create([
     {name: 'landscape_name', type: 'string'},
     {name: 'started', type: 'date'}
 ]);
+
+function stringToFloat(s) {
+    var f = parseFloat(s);
+    if (isNaN(f)) {
+        f = 0.0;
+    }
+    return f;
+};
 
 function weatherTextToRecords(end_ymd, data) {
     var records = [];
@@ -146,16 +155,13 @@ function weatherTextToRecords(end_ymd, data) {
             hour2: parseInt(tokens[5]),
             hmin: parseFloat(tokens[6]),
             hmax: parseFloat(tokens[8]),
-            precipitation: Math.max(0, parseFloat(tokens[9])) * 10
+            precipitation: Math.max(0, stringToFloat(tokens[10])) / 10
         }));
     }
     if (records.length > 0 && end_ymd !== last_ymd) {
         // voeg laatste record toe met zelfde gegevens behalve datum
         records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, records[records.length-1].data)));
-        // en morgen// TODO
-        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate('20130604', 'Ymd')}, records[records.length-1].data)));
     }
-    // dag van vandaag toevoegen (indien niet aanwezig)
     return records;
 }
 
@@ -200,7 +206,7 @@ function getWindData(station) {
     records.push(new WindRecord({
         station: station,
         date: model_datetime,
-        time: zpad(model_datetime.getHours()) + '00',
+        time: zpad(model_datetime.getHours(), 2) + '00',
         speed: 1,
         direction: 0,
         cloudiness: 0
@@ -210,7 +216,7 @@ function getWindData(station) {
     records.push(new WindRecord({
         station: station,
         date: tomorrow,
-        time: zpad(model_datetime.getHours()) + '00',
+        time: zpad(model_datetime.getHours(), 2) + '00',
         speed: 1,
         direction: 0,
         cloudiness: 0
@@ -290,11 +296,11 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
         dataIndex: 'hmax'
     }, {
         header: 'Rainfall',
-        format: '000',
+        format: '000.0',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
-            maxLength: 3,
+            maxLength: 5,
             minValue: 0,
             maxValue: 100
         }),
@@ -338,7 +344,7 @@ var windColumnModel = new Ext.grid.ColumnModel({
         editable: true,
         xtype: 'datecolumn'
     }, {
-        header: 'Speed',
+        header: 'Speed (m/s)',
         format: '00.0',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
@@ -347,7 +353,7 @@ var windColumnModel = new Ext.grid.ColumnModel({
         }),
         dataIndex: 'speed'
     }, {
-        header: 'Direction',
+        header: 'Direction (&deg;)',
         format: '000',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
@@ -356,7 +362,7 @@ var windColumnModel = new Ext.grid.ColumnModel({
         }),
         dataIndex: 'direction'
     }, {
-        header: 'Cloudiness',
+        header: 'Cloudiness (%)',
         format: '000',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
@@ -446,7 +452,38 @@ var weathersettingsWindow = new Ext.Window({
     defaults: {
         height: 100
     },
-    items: [weatherGrid, windGrid],
+    items: [
+        new Ext.form.ComboBox({
+            id: 'weatherstation2',
+            fieldLabel: 'Weather station',
+            name: 'station',
+            typeAhead: true,
+            triggerAction: 'all',
+            lazyRender: true,
+            anchor: '100%',
+            align: 'right',
+            mode: 'local',
+            value: 275, // default: Deelen
+            forceSelection: true, editable: false,
+            store: new Ext.data.ArrayStore({
+                id: 0,
+                fields: [
+                    'id',
+                    'naam'
+                ],
+                data: [[0, 'Eigen gegevens'], [260, 'De Bilt'], [275, 'Deelen'], [283, 'Hupsel'], [375, 'Volkel']]
+            }),
+            valueField: 'id',
+            displayField: 'naam',
+            listeners: {
+                'select': function() {
+                        not_implemented();
+                    }
+            }
+        }),
+        weatherGrid, 
+        windGrid
+    ],
     buttons:[{
         text: OpenLayers.i18n('Close'), 
         handler: function() {
@@ -1304,6 +1341,51 @@ Ext.onReady(function() {
                             },
                             //actions["makeLcp"]
                             new Ext.Button({
+                                text: OpenLayers.i18n("Edit"),
+                                formBind: true, // If form validation fails disable the button
+                                //xtype: 'button',
+                                tooltip: OpenLayers.i18n("Edit the land use"),
+                                handler: function() {
+                                    not_implemented();
+                                    /*
+                                    var terreinid = Gmi.Session.terreinid; //Ext.getCmp("terrein_id").getValue();
+                                    var landscapename = Ext.getCmp("fuelmodel_name").getValue();
+                                    if (! terreinid) {
+                                        alert(OpenLayers.i18n('Landscape file cannot be prepared yet.'));
+                                    } else {
+                                        // maak landschap ('lcp') voor model aan
+                                        startProgress(OpenLayers.i18n('makelcp'));
+                                        Ext.Ajax.request({
+                                            url: '/geoserver/ows?', //service=WPS&request=execute&version=1.0.0&identifier=py:wildfire_makelcp&datainputs=userid=' + userid + ';terreinid=' + terreinid + ';landscapename=' + landscapename + ';&RawDataOutput=string&mimeType=application/json',
+                                            params: {
+                                                service: 'WPS',
+                                                version: '1.1.0',
+                                                request: 'execute',
+                                                identifier: 'py:wildfire_makelcp',
+                                                datainputs: combineParams({
+                                                    userid: Gmi.Session.userid,
+                                                    terreinid: terreinid,
+                                                    landscapename: landscapename
+                                                }, ';'),
+                                                RawDataOutput: 'string',
+                                                mimeType: 'application/json'
+                                            },
+                                            extraParams: {
+                                                count: 0
+                                            },
+                                            on_finished: function(out_params) {
+                                                // bewaar id van fuelmodel
+                                                Gmi.Session.fuelid = out_params.runid;
+                                            },
+                                            success: wpsSuccessCallback,
+                                            failure: wpsFailureCallback
+                                        });
+                                    }
+                                    */
+                                },
+                                cls: 'g-actie-knop'
+                            }),
+                            new Ext.Button({
                                 text: OpenLayers.i18n("Save"),
                                 formBind: true, // If form validation fails disable the button
                                 //xtype: 'button',
@@ -1358,6 +1440,16 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
+                            title: OpenLayers.i18n('Subset'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            collapsible: true,
+                            collapsed: true,
+                            items: []
+                        },
+                        {
+                            xtype: 'fieldset',
                             title: OpenLayers.i18n('Date & time'),
                             defaults: {
                                 width: 'inherited'
@@ -1410,7 +1502,7 @@ Ext.onReady(function() {
                                             'id',
                                             'naam'
                                         ],
-                                        data: [[260, 'De Bilt'], [275, 'Deelen'], [283, 'Hupsel'], [375, 'Volkel']]
+                                        data: [[0, 'Eigen gegevens'], [260, 'De Bilt'], [275, 'Deelen'], [283, 'Hupsel'], [375, 'Volkel']]
                                     }),
                                     valueField: 'id',
                                     displayField: 'naam'
@@ -1418,19 +1510,6 @@ Ext.onReady(function() {
                                 new Ext.Button({
                                     text: OpenLayers.i18n('Show weather data'),
                                     handler: showClimateData,
-                                    cls: 'g-actie-knop'
-                                })
-                            ]
-                        }, {
-                            xtype: 'fieldset',
-                            title: OpenLayers.i18n('Fire location'),
-                            defaults: {
-                                width: 'inherited'
-                            },
-                            items: [
-                                new Ext.Button({
-                                    text: OpenLayers.i18n('Draw fire line'),
-                                    handler: drawFireLine,
                                     cls: 'g-actie-knop'
                                 })
                             ]
@@ -1446,11 +1525,36 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
-                            title: OpenLayers.i18n('Execution'),
+                            title: OpenLayers.i18n('Fire location'),
                             defaults: {
                                 width: 'inherited'
                             },
                             items: [
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Draw fire line'),
+                                    handler: drawFireLine,
+                                    cls: 'g-actie-knop'
+                                })
+                            ]
+                        }, {
+                            xtype: 'fieldset',
+                            title: OpenLayers.i18n('Execution'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [{
+                                    fieldLabel: OpenLayers.i18n('Name'),
+                                    xtype: 'textfield',
+                                    id: 'fire_name',
+                                    name: 'fire_name',
+                                    tooltip: OpenLayers.i18n('Name of fire'),
+                                    anchor: '100%',
+                                    width: 100,
+                                    align: 'right',
+                                    //allowBlank: false, // must be filled in!
+                                    value: OpenLayers.i18n('untitled')
+                                    //style: 'padding: 0px;'
+                                },
                                 new Ext.Button({
                                     text: OpenLayers.i18n('Start run'),
                                     handler: startModelRun,
@@ -1604,7 +1708,7 @@ Ext.onReady(function() {
                 Ext.getCmp('model_date').setValue(today);
                 // tijd in formulier aanpassen
                 console.log(today.toLocaleTimeString());
-                Ext.getCmp('model_time').setValue( zpad(h) + ':' + zpad(m_floor) );
+                Ext.getCmp('model_time').setValue( zpad(h, 2) + ':' + zpad(m_floor, 2) );
                 prev_minutes = m_floor;
             }
         },
@@ -1626,7 +1730,7 @@ function setModelDateTime(datetime) {
     Ext.getCmp('model_date').setValue(datetime);
     var h = datetime.getHours();
     var m = datetime.getMinutes();
-    var time = zpad(h) + zpad(m); // ':' niet nodig?
+    var time = zpad(h, 2) + zpad(m, 2); // ':' niet nodig?
     Ext.getCmp('model_time').setValue(time);
 };
 
@@ -1685,12 +1789,18 @@ function weatherStoreAsString() {
 
     var weatherString = '';
     //var model_start = getModelDateTime();
-    for (var i = 0; i < weatherData.length; i++) {                     
+    var lastDate;
+    var lastDataValues;
+    var month, day, rn, am, pm, tlo, thi, hhi, hlo, elv;
+    for (var i = 0; i < weatherData.length; i++) {
         weatherData[i].data.hour1 = 500;
         weatherData[i].data.hour2 = 1500; // eis: hour1 < hour2
         weatherData[i].data.precipitation = 0;
-        month = zpad(weatherData[i].data.date.getMonth() + 1, 2);
-        day = zpad(weatherData[i].data.date.getDate(), 2);
+        
+        lastDate = weatherData[i].data.date;
+        
+        month = zpad(lastDate.getMonth() + 1, 2);
+        day = zpad(lastDate.getDate(), 2);
         rn = zpad(weatherData[i].data.precipitation, 2);
         am = zpad(weatherData[i].data.hour1, 4);
         pm = zpad(weatherData[i].data.hour2, 4);
@@ -1699,11 +1809,21 @@ function weatherStoreAsString() {
         hhi = zpad(Math.min(99, weatherData[i].data.hmax), 2); // max 99 voor farsite
         hlo = zpad(Math.min(99, weatherData[i].data.hmin), 2); // max 99 voor farsite
         elv = '0000';
-        weatherString += '(' + month + ',' + day  + ',' + rn + ',' 
-            + am + ',' + pm +',' + tlo +',' + thi +',' + hhi +',' + hlo +',' + elv +')';
+        var lastDataValues = rn + ',' 
+            + am + ',' + pm +',' + tlo +',' + thi +',' + hhi +',' + hlo +',' + elv;
+        weatherString += '(' + month + ',' + day  + ',' + lastDataValues +')';
         if (i < weatherData.length - 1) { 
             weatherString += ',';
         }
+    }
+    // EIS: elke dag data; ook data nodig voor model tijd + 6
+    var modelDate = getModelDateTime();
+    while (modelDate > lastDate) {
+        // voor elke dag gegevens toevoegen als laatste dataString
+        lastDate.setDate(lastDate.getDate() + 1);
+        month = zpad(lastDate.getMonth() + 1, 2);
+        day = zpad(lastDate.getDate(), 2);
+        weatherString += ',(' + month + ',' + day + ',' + lastDataValues + ')'; 
     }
     console.log('weatherString', weatherString);
     return weatherString;
@@ -1801,6 +1921,7 @@ function startModelRun() {
     // startRun process aanroepen
     // Let op: 
     startProgress(OpenLayers.i18n('startRun'));
+    var fire_name = Ext.getCmp('fire_name').getValue();
     Ext.Ajax.request({
         url: '/geoserver/ows?', 
         params: {
@@ -1810,7 +1931,7 @@ function startModelRun() {
             identifier: 'py:wildfire_startRun',
             datainputs: combineParams({
                 userid: Gmi.Session.userid,
-                name: 'test brand', // naam van brand
+                name: fire_name, // naam van brand
                 fuelmodel: Gmi.Session.fuelid, // runid van fuelmodel (resultaat van makelcp)
                 geom: wkt, // wkt LINESTRING(x y, ...) RD projectie
                 // wind: (month,day,hour,speed,dir,cl), etc (6 uren)
@@ -1820,8 +1941,8 @@ function startModelRun() {
                 weatherstring: weatherStoreAsString(),
                 // weatherstring=(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000);
                 // startmonth=05;startday=16;starthour=1508;
-                startmonth: zpad(model_datetime.getMonth() + 1), // 0-padded; month geeft 0..11
-                startday: zpad(model_datetime.getDate()), // 0-padded, laatste dag van weather/wind-string
+                startmonth: zpad(model_datetime.getMonth() + 1, 2), // 0-padded; month geeft 0..11
+                startday: zpad(model_datetime.getDate(), 2), // 0-padded, laatste dag van weather/wind-string
                 starthour: hhmm // hhmm
             }, ';'),
             RawDataOutput: 'string',
