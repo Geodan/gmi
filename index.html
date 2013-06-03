@@ -39,6 +39,14 @@
         Proj4js.defs["EPSG:28992"] = "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.9999079  +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.417,50.3319,465.552,-0.398957,0.343988,-1.8774,4.0725 +units=m +no_defs";
         Proj4js.defs["EPSG:32631"] = "+proj=utm +zone=31 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"; 
         </script>
+        <script type="text/javascript">
+if (typeof String.prototype.startsWith !== 'function') {
+  // needed for Chrome browser
+  String.prototype.startsWith = function (str){
+    return this.slice(0, str.length) === str;
+  };
+}
+        </script>
         <link rel="stylesheet" type="text/css" href="externals/GeoExt/resources/css/geoext-all.css" />
         <link rel="stylesheet" type="text/css" href="css/natuurbrandmodel.css" />
     </head>
