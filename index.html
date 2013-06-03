@@ -152,6 +152,8 @@ function weatherTextToRecords(end_ymd, data) {
     if (records.length > 0 && end_ymd !== last_ymd) {
         // voeg laatste record toe met zelfde gegevens behalve datum
         records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, records[records.length-1].data)));
+        // en morgen// TODO
+        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate('20130604', 'Ymd')}, records[records.length-1].data)));
     }
     // dag van vandaag toevoegen (indien niet aanwezig)
     return records;
@@ -162,10 +164,11 @@ var climateStations = [];
 function getClimateData(station) {
     //var today = Ext.util.Format.date(new Date(), 'Ymd');
     var end = Ext.getCmp('model_date').getValue();
+    //end.setDate(end.getDate() + 1); // ook morgen
     var end_ymd = end.dateFormat('Ymd');
     
     var start = new Date(end);
-    start.setDate(end.getDate() - 5);
+    start.setDate(end.getDate() - 6);
     var start_ymd = start.dateFormat('Ymd');
     
     var today = new Date();
@@ -285,6 +288,17 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
             maxValue: 100
         }),
         dataIndex: 'hmax'
+    }, {
+        header: 'Rainfall',
+        format: '000',
+        editable: true,
+        editor: new Ext.form.NumberField({  // rules about editing
+            allowBlank: false,
+            maxLength: 3,
+            minValue: 0,
+            maxValue: 100
+        }),
+        dataIndex: 'precipitation'
     }]
 });
 
@@ -1670,7 +1684,11 @@ function weatherStoreAsString() {
                 //weatherstring: '(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000)', 
 
     var weatherString = '';
+    //var model_start = getModelDateTime();
     for (var i = 0; i < weatherData.length; i++) {                     
+        weatherData[i].data.hour1 = 500;
+        weatherData[i].data.hour2 = 1500; // eis: hour1 < hour2
+        weatherData[i].data.precipitation = 0;
         month = zpad(weatherData[i].data.date.getMonth() + 1, 2);
         day = zpad(weatherData[i].data.date.getDate(), 2);
         rn = zpad(weatherData[i].data.precipitation, 2);
@@ -1678,8 +1696,8 @@ function weatherStoreAsString() {
         pm = zpad(weatherData[i].data.hour2, 4);
         tlo = zpad(weatherData[i].data.tmin, 2); // todo: afronden
         thi = zpad(weatherData[i].data.tmax, 2);
-        hhi = zpad(weatherData[i].data.hmax, 2);
-        hlo = zpad(weatherData[i].data.hmin, 2);
+        hhi = zpad(Math.min(99, weatherData[i].data.hmax), 2); // max 99 voor farsite
+        hlo = zpad(Math.min(99, weatherData[i].data.hmin), 2); // max 99 voor farsite
         elv = '0000';
         weatherString += '(' + month + ',' + day  + ',' + rn + ',' 
             + am + ',' + pm +',' + tlo +',' + thi +',' + hhi +',' + hlo +',' + elv +')';
@@ -1802,7 +1820,7 @@ function startModelRun() {
                 weatherstring: weatherStoreAsString(),
                 // weatherstring=(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000);
                 // startmonth=05;startday=16;starthour=1508;
-                startmonth: zpad(model_datetime.getMonth()), // 0-padded
+                startmonth: zpad(model_datetime.getMonth() + 1), // 0-padded; month geeft 0..11
                 startday: zpad(model_datetime.getDate()), // 0-padded, laatste dag van weather/wind-string
                 starthour: hhmm // hhmm
             }, ';'),
