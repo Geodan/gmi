@@ -19,3 +19,28 @@
     background-position: -1px -24px;
 }
 
+/* volgende 2 zijn nodig voor measure in editing toolbar */
+.olControlEditingToolbar .olControlMeasureItemInactive { 
+    /*background-position: -1px -1px;*/
+    background-image: url("img/MeasureDisable.png");
+}
+
+.olControlEditingToolbar .olControlMeasureItemActive { 
+    /*background-position: -1px -24px;*/
+    background-image: url("img/MeasureEnable.png");
+}
+
+.olControlCustomToolbar { /* voor navigationhistory */
+    margin: 5px 5px 0 0;
+    left: 50px;
+}
+
+.olControlNavigationHistory { /* prev/next knoppen */
+    float: right;
+    margin: 0 0 5px 5px;
+}
+
+/* niet gevonden tiles */
+.olImageLoadError {
+    background-color: transparent;
+}

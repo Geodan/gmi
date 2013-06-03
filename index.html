@@ -11,11 +11,14 @@
               href="./externals/ext-3.4.1/resources/css/ext-all.css" />
         <link rel="stylesheet" type="text/css"
               href="./externals/ext-3.4.1/resources/css/xtheme-gray.css" />
-        <script type="text/javascript" src="externals/ext-3.4.1/adapter/ext/ext-base-debug.js"></script>
-        <!--
+        
+        <!-- EITHER default ext js adapter -->
+        <!--script type="text/javascript" src="externals/ext-3.4.1/adapter/ext/ext-base-debug.js"></script-->
+        <!-- OR jquery library and related extjs adapter -->
         <script type="text/javascript" src="externals/jquery-1.9.1.min.js"></script>
         <script type="text/javascript" src="externals/ext-3.4.1/adapter/jquery/ext-jquery-adapter-debug.js"></script>
-        -->
+        
+        <!-- rest of extjs -->
         <script type="text/javascript" src="externals/ext-3.4.1/ext-all-debug.js"></script>
         
 	<!-- Proj resources -->
@@ -23,10 +26,14 @@
         
         <script type="text/javascript" src="externals/OpenLayers-2.12/OpenLayers.js"></script>
         <script type="text/javascript" src="externals/OpenLayers-2.12/lib/OpenLayers/Lang/nl.js"></script>
+        <link rel="stylesheet" type="text/css" href="externals/OpenLayers-2.12/theme/default/style.css" />
         <!-- GeoExt -->
         <script src="externals/GeoExt/lib/GeoExt.js" type="text/javascript"></script>
         <script src="externals/GeoExt/lib/GeoExt/locale/GeoExt-fr.js" type="text/javascript"></script>
         <script src="externals/GeoExt/lib/GeoExt/locale/GeoExt-nl.js" type="text/javascript"></script>
+	<!-- gxp resources -->
+	<link rel="stylesheet" type="text/css" href="externals/gxp/src/theme/all.css" />
+	<script type="text/javascript" src="externals/gxp/src/script/loader.js"></script>
 	<script type="text/javascript">
         /** Create viewer instance, this is the core of the app **/
         Proj4js.defs["EPSG:28992"] = "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.9999079  +x_0=155000 +y_0=463000 +ellps=bessel +towgs84=565.417,50.3319,465.552,-0.398957,0.343988,-1.8774,4.0725 +units=m +no_defs";
@@ -47,6 +54,7 @@ Gmi.Settings.maxArea = 10000 * 10000; // m2; 10 bij 10 km, 100 km2
 Gmi.Settings.tijd_afronding_minuten = 5;
 Gmi.Settings.operationalMode = 1;
 Gmi.Settings.dateFormat = 'Y-m-d';
+Gmi.Settings.decimalSeparator = ',';
 
 Gmi.Session.userid = '0';
 
@@ -228,39 +236,45 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
         format: Gmi.Settings.dateFormat,
         xtype: 'datecolumn'
     }, {
-        header: 'Tmin',
+        header: 'Tmin (°C)',
         format: '00.0',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
-            maxLength: 3
+            decimalSeparator: Gmi.Settings.decimalSeparator,
+            maxLength: 4
         }),
         dataIndex: 'tmin'
     }, {
-        header: 'Tmax',
+        header: 'Tmax (°C)',
         format: '00.0',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
-            maxLength: 3
+            decimalSeparator: Gmi.Settings.decimalSeparator,
+            maxLength: 4
         }),
         dataIndex: 'tmax'
     }, {
-        header: 'RVmin',
+        header: 'RVmin (%)',
         format: '000',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
-            maxLength: 3
+            maxLength: 3,
+            minValue: 0,
+            maxValue: 100
         }),
         dataIndex: 'hmin'
     }, {
-        header: 'RVmax',
+        header: 'RVmax (%)',
         format: '000',
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
-            maxLength: 3
+            maxLength: 3,
+            minValue: 0,
+            maxValue: 100
         }),
         dataIndex: 'hmax'
     }]
@@ -422,9 +436,15 @@ weathersettingsWindow.hide();
 
 function showClimateData() {
     weathersettingsWindow.show();
-    weatherStore.loadData();
+    
+    if (weatherStore.getRange().length == 0) {
+        weatherStore.loadData();
+    }
+    if (windStore.getRange().length == 0) {
+        windStore.loadData();
+    }
+    
     weatherGrid.startEditing(0, 0);
-    windStore.loadData();
     windGrid.startEditing(0, 0);
 };
 
@@ -519,7 +539,11 @@ Ext.onReady(function() {
         displayInLayerSwitcher: false,
         styleMap: new OpenLayers.StyleMap({
             temporary: OpenLayers.Util.applyDefaults({
-                    pointRadius: 5
+                    pointRadius: 5,
+                    strokeWidth: 3,
+                    strokeOpacity: 1,
+                    strokeColor: "#ff0000",
+                    strokeDashstyle: "dash"
                 }, OpenLayers.Feature.Vector.style.temporary),
             'default': OpenLayers.Util.applyDefaults({
                     pointRadius: 5,
@@ -544,6 +568,132 @@ Ext.onReady(function() {
             scope: wildfire_layer
         }
     });
+    
+    var measureControl = new OpenLayers.Control.Measure( OpenLayers.Handler.Path, {
+        immediate: true,
+        persist: true,
+        displayClass: 'olControlMeasure',
+        title: OpenLayers.i18n('Measure distances in map'),
+        handlerOptions: {
+            layerOptions: {
+                styleMap: new OpenLayers.StyleMap({
+                    "default": new OpenLayers.Style(null, {
+                        rules: [new OpenLayers.Rule({
+                            symbolizer: {
+                                "Point": {
+                                    pointRadius: 4,
+                                    graphicName: "square",
+                                    fillColor: "white",
+                                    fillOpacity: 1,
+                                    strokeWidth: 1,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#333333"
+                                },
+                                "Line": {
+                                    strokeWidth: 3,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#666666",
+                                    strokeDashstyle: "dash"
+                                },
+                                "Polygon": {
+                                    strokeWidth: 2,
+                                    strokeOpacity: 1,
+                                    strokeColor: "#666666",
+                                    fillColor: "white",
+                                    fillOpacity: 0.3
+                                }
+                            }
+                        })]
+                    })
+                })
+            }
+        }
+    });  
+
+    measureControl.getCustomLength = function(evt, onlySum) {
+    
+        var el = document.getElementById('measure-tip');
+        if (! el) {
+            if (jQuery) {
+                jQuery('body').append('<div id="measure-tip" style="border: solid; background-color: white; position: absolute; top: 300px; z-index: 1020; padding: 4px;"></div>');
+            } else {
+                el = document.createElement('div');
+                el.id = 'measure-tip';
+                el.style.border = 'solid';
+                el.style.backgroundColor = 'white';
+                el.style.position = 'absolute';
+                el.style.height = '20px';
+                el.style.width = '300px';
+                el.style.left = '500px';
+                el.style.top = '300px';
+                document.getElementsByTagName('body')[0].appendChild(el);
+            }
+        }
+    
+        var idx = evt.geometry.components.length;
+
+        if (idx < 2)
+            return '';
+
+        //$('#map-size').html(ui.size.width + 'x' + ui.size.height)
+        //.css({ left: Math.floor(ui.size.width/2) + 'px', top: Math.floor(ui.size.height/2) + 'px' }); 
+
+        var str = '';
+        if (idx > 2 || onlySum) {
+            str = OpenLayers.i18n('Distance: ${distance} ${units}', {
+                distance: evt.units === 'km' ? evt.measure.toFixed(3) : evt.measure.toFixed(1), 
+                units: evt.units
+            });
+            //str += 'Total: ' + (evt.units === 'km' ? evt.measure.toFixed(3) : evt.measure.toFixed(1)) + ' ' + evt.units;// + '&nbsp;&nbsp;&nbsp;';
+        }
+
+        if (!onlySum) {
+            // bepaal ook lengte van laatste segment
+            var geom = new OpenLayers.Geometry.LineString([
+                evt.geometry.components[idx - 2],
+                evt.geometry.components[idx - 1]
+            ]);
+            var lastLengthArr = this.getBestLength(geom);
+
+            str += 'Last segment: ' + (lastLengthArr[1] === 'km' ?  lastLengthArr[0].toFixed(3) : lastLengthArr[0].toFixed(1)) + ' ' + lastLengthArr[1];
+        }
+
+        return str;
+    };
+
+    //map.addControl(measureControl); 
+
+    // Update content in .foo div   
+    measureControl.events.on({
+        'deactivate': function(evt) {
+            console.log('deactivate', evt);
+            var el = document.getElementById('measure-tip');
+            if (el) {
+                // opruimen
+                jQuery('#measure-tip').remove();
+            }
+        },
+        'measure': function(evt) {
+            //$('.foo').html();
+            console.log('measure', evt);
+            var distanceMsg = measureControl.getCustomLength(evt, true);
+            //jQuery('#measure-tip').text(str);
+            var el = document.getElementById('measure-tip');
+            el.innerHTML = distanceMsg;
+
+            console.log('afstand', distanceMsg);
+        },
+        'measurepartial': function(evt) {
+            //$('.foo').html(measureControl.getCustomLength(evt, false));
+            console.log('measurepartial', evt);
+            var distanceMsg = measureControl.getCustomLength(evt, false);
+            //jQuery('#measure-tip').text(str);
+            var el = document.getElementById('measure-tip');
+            el.innerHTML = distanceMsg;
+            console.log('afstand', distanceMsg);
+        }
+    });
+
     // OpenLayers' EditingToolbar internally creates a Navigation control, we
     // want a TouchNavigation control here so we create our own editing toolbar
     var toolbar = new OpenLayers.Control.Panel({
@@ -562,23 +712,27 @@ Ext.onReady(function() {
         // this control is just there to be able to deactivate the drawing
         // tools
         new OpenLayers.Control({
-            displayClass: 'olControlNavigation'
+            displayClass: 'olControlNavigation',
+            title: OpenLayers.i18n('Navigate in map')
         }),
+        measureControl,
         new OpenLayers.Control.ModifyFeature(wildfire_layer, {
             vertexRenderIntent: 'temporary',
-            displayClass: 'olControlModifyFeature'
+            displayClass: 'olControlModifyFeature',
+            title: OpenLayers.i18n('Modify existing fire line')
         }),
         /*new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Point, {
             displayClass: 'olControlDrawFeaturePoint'
         }),*/
         new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Path, {
-            displayClass: 'olControlDrawFeaturePath'
+            displayClass: 'olControlDrawFeaturePath',
+            title: OpenLayers.i18n('Draw new fire line')
         })/*,
         new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Polygon, {
             displayClass: 'olControlDrawFeaturePolygon'
         })*/
     ]);
-    
+
     // van geoext example tree.html
     var nav, panel;
     mapPanel = new GeoExt.MapPanel({
@@ -589,15 +743,24 @@ Ext.onReady(function() {
             allOverlays: false, 
             displayProjection: 'EPSG:4326',
             projection: 'EPSG:900913',
+            theme: null,
             controls: [
                 new OpenLayers.Control.Navigation({
                     dragPanOptions: {
                         enableKinetic: true
                     }
                 }),
-                new OpenLayers.Control.Zoom(),
-                new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: ''}),
-                nav = new OpenLayers.Control.NavigationHistory(),
+                new OpenLayers.Control.Zoom({title: OpenLayers.i18n('Change zoom')}),
+                new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: '', title: 'scaleline'}),
+                nav = new OpenLayers.Control.NavigationHistory({
+                    //displayClass: 'olControlCustomToolbar'
+                    previousOptions: {
+                        title: OpenLayers.i18n('Restore previous extent')
+                    },
+                    nextOptions: {
+                        title: OpenLayers.i18n('Restore next extent')
+                    }
+                }),
                 //new OpenLayers.Control.Permalink(), // todo: uitzoeken werking geoext met permalink
                 toolbar
             ]
@@ -652,6 +815,7 @@ Ext.onReady(function() {
     });
     var panel = new OpenLayers.Control.Panel({
         //div: document.getElementById("panel")
+        displayClass: 'olControlCustomToolbar'
     });
     panel.addControls([nav.next, nav.previous]);
     mapPanel.map.addControl(panel);
@@ -754,7 +918,7 @@ Ext.onReady(function() {
         },
         rootVisible: false,
         lines: false,
-        bbar: [{
+        bbar: [/*{
             contentEl: document.getElementById('show-btn'),
             text: OpenLayers.i18n("Ignite"),
             handler: function() {
@@ -762,7 +926,7 @@ Ext.onReady(function() {
                 //treeConfigWin.show();
                 //Ext.getCmp("treeconfig").setValue(treeConfig);
             }
-        }, {
+        }, */{
             text: OpenLayers.i18n('Wfs Grid'),
             handler: function() {
                 var map = mapPanel.map;
@@ -775,6 +939,7 @@ Ext.onReady(function() {
                         //rendererOptions: {
                         //    zIndexing: true
                         displayInLayerSwitcher: false,
+                        visibility: false,
                         styleMap: new OpenLayers.StyleMap({
                             'default': new OpenLayers.Style({
                                 //display: 'none',
@@ -848,16 +1013,24 @@ Ext.onReady(function() {
                 gridPanel.getSelectionModel().bind(wfsLayer);
                 gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
                     console.log('rowselect', row.data.feature);
-                    var center = row.data.feature.geometry.getCentroid();
+                    var geom = row.data.feature.geometry;
+                    var center = geom.getCentroid();
                     mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
                     
                     var datetime = new Date(row.data.feature.attributes['started']);
                     
+                    // zetten van box
+                    var bounds = geom.getBounds();
+                    setBox(mapPanel.map, bounds);
+
+                    // zetten van fuelmodel_name
+                    Ext.getCmp('fuelmodel_name').setValue(row.data.feature.attributes['landscape_name']);
+        
                     // zetten van model_date en model_time
                     setModelDateTime(datetime);
                     
                     // terrein laag (landscape_id) zetten? makkelijker bij testen
-                    toonTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
+                    showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
                     
                     // tijd van neerslagradar
                     time = new Date(datetime.getTime() - datetime.getTime() % (5*60*1000)); // round to 5 minutes
@@ -1002,15 +1175,8 @@ Ext.onReady(function() {
                                                 //return;
                                             }
                                             console.log('area', area);
-
-                                            var layers = map.getLayersByName('_boxes_');
-                                            if (layers.length > 0) {
-                                                // layer leegmaken
-                                                layers[0].clearMarkers();
-                                                // nieuwe toevoegen
-                                                var box = new OpenLayers.Marker.Box(bounds);
-                                                layers[0].addMarker(box);
-                                            }
+                                            
+                                            setBox(map, bounds);
                                         }
                                     });
                                     mapPanel.map.addControl(control);
@@ -1450,7 +1616,18 @@ function getModelDateTime() {
     return model_date;
 };
 
-function toonTerrein(map, terrein_id) {
+function setBox(map, bounds) {
+    var layers = map.getLayersByName('_boxes_');
+    if (layers.length > 0) {
+        // layer leegmaken
+        layers[0].clearMarkers();
+        // nieuwe toevoegen
+        var box = new OpenLayers.Marker.Box(bounds);
+        layers[0].addMarker(box);
+    }
+};
+
+function showTerrein(map, terrein_id) {
     // bewaar runid als terreinid
     Gmi.Session.terreinid = terrein_id;
     // verwijdere oude terreinen
@@ -1491,7 +1668,7 @@ function weatherStoreAsString() {
         rn = zpad(weatherData[i].data.precipitation, 2);
         am = zpad(weatherData[i].data.hour1, 4);
         pm = zpad(weatherData[i].data.hour2, 4);
-        tlo = zpad(weatherData[i].data.tmin, 2);
+        tlo = zpad(weatherData[i].data.tmin, 2); // todo: afronden
         thi = zpad(weatherData[i].data.tmax, 2);
         hhi = zpad(weatherData[i].data.hmax, 2);
         hlo = zpad(weatherData[i].data.hmin, 2);
@@ -1532,7 +1709,13 @@ function windStoreAsString() {
 };
 
 function drawFireLine() {
-    not_implemented();
+    // drawfeature knop activeren
+    var map = mapPanel.map;
+    //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
+    var controls = map.getControlsByClass('OpenLayers.Control.DrawFeature');
+    if (controls.length > 0) {
+        controls[0].activate();
+    }
 };
 
 function startModelRun() {
