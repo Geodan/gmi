@@ -667,27 +667,9 @@ Ext.onReady(function() {
                 })
             }
         }
-    });  
+    });
 
     measureControl.getCustomLength = function(evt, onlySum) {
-    
-        var el = document.getElementById('measure-tip');
-        if (! el) {
-            if (jQuery) {
-                jQuery('body').append('<div id="measure-tip" style="border: solid; background-color: white; position: absolute; top: 300px; z-index: 1020; padding: 4px;"></div>');
-            } else {
-                el = document.createElement('div');
-                el.id = 'measure-tip';
-                el.style.border = 'solid';
-                el.style.backgroundColor = 'white';
-                el.style.position = 'absolute';
-                el.style.height = '20px';
-                el.style.width = '300px';
-                el.style.left = '500px';
-                el.style.top = '300px';
-                document.getElementsByTagName('body')[0].appendChild(el);
-            }
-        }
     
         var idx = evt.geometry.components.length;
 
@@ -726,29 +708,20 @@ Ext.onReady(function() {
     measureControl.events.on({
         'deactivate': function(evt) {
             console.log('deactivate', evt);
-            var el = document.getElementById('measure-tip');
-            if (el) {
-                // opruimen
-                jQuery('#measure-tip').remove();
-            }
+            measureTip.hide();
         },
         'measure': function(evt) {
             //$('.foo').html();
             console.log('measure', evt);
             var distanceMsg = measureControl.getCustomLength(evt, true);
-            //jQuery('#measure-tip').text(str);
-            var el = document.getElementById('measure-tip');
-            el.innerHTML = distanceMsg;
-
+            measureTip.show(distanceMsg);
             console.log('afstand', distanceMsg);
         },
         'measurepartial': function(evt) {
             //$('.foo').html(measureControl.getCustomLength(evt, false));
             console.log('measurepartial', evt);
             var distanceMsg = measureControl.getCustomLength(evt, false);
-            //jQuery('#measure-tip').text(str);
-            var el = document.getElementById('measure-tip');
-            el.innerHTML = distanceMsg;
+            measureTip.show(distanceMsg);
             console.log('afstand', distanceMsg);
         }
     });
@@ -1203,11 +1176,42 @@ Ext.onReady(function() {
                                         draw: function () {
                                             // this Handler.Box will intercept the shift-mousedown
                                             // before Control.MouseDefault gets to see it
-                                            this.box = new OpenLayers.Handler.Box( control,
-                                                {"done": this.notice},
-                                                //{"move": function(){ console.log('move')}}, // voor .Drag
-                                                {keyMaskX: OpenLayers.Handler.MOD_SHIFT}
+                                            var this_box = new OpenLayers.Handler.Box( control, {
+                                                    "done": this.notice
+                                                    //{"move": function(){ console.log('move')}}, // voor .Drag
+                                                }, {
+                                                    //keyMaskX: OpenLayers.Handler.MOD_SHIFT,
+                                                    moveBox: function(xy) {
+                                                        OpenLayers.Handler.Box.prototype.moveBox.apply(this_box, [xy]);
+                                                        
+                                                        var start = this_box.dragHandler.start;
+                                                        var top = Math.min(start.y, xy.y);
+                                                        var bottom = Math.max(start.y, xy.y);
+                                                        var left = Math.min(start.x, xy.x);
+                                                        var right = Math.max(start.x, xy.x);
+                                                        bounds = new OpenLayers.Bounds(left, bottom, right, top);
+                                                        var ll = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.left, bounds.bottom)); 
+                                                        // upper-right
+                                                        var ur = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.right, bounds.top)); 
+
+                                                        var bounds = new OpenLayers.Bounds(
+                                                            ll.lon.toFixed(0), // left
+                                                            ll.lat.toFixed(0), // bottom
+                                                            ur.lon.toFixed(0), // right
+                                                            ur.lat.toFixed(0) // top
+                                                        );
+                                                        var geom = bounds.toGeometry();
+                                                        var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
+                                                        console.log('moveBox', bounds, area, area > Gmi.Settings.maxArea ? 'TOO LARGE' : '');
+                                                        measureTip.show(area > Gmi.Settings.maxArea ? OpenLayers.i18n('TOO LARGE') : OpenLayers.i18n('Oppervlakte ${area}', {area: areaWithUnit(area)}))
+                                                    }/*,
+                                                    endBox: function(end) {
+                                                        OpenLayers.Handler.Box.prototype.endBox.apply(this_box, [end]);
+                                                        console.log('endBox', this_box, end);
+                                                    }*/
+                                                }
                                             );
+                                            this.box = this_box;
                                             this.box.activate();
                                         },
 
@@ -1232,10 +1236,16 @@ Ext.onReady(function() {
                                                     area: area
                                                 }));
                                                 //return;
+                                            } else {
+                                                console.log('area', area);
+
+                                                setBox(map, bounds);
+                                                
+                                                // select region control deactiveren
+                                                b.control.box.deactivate();
+                                                map.removeControl(b.control);
+                                                b.doToggle(); // en knop uitzetten
                                             }
-                                            console.log('area', area);
-                                            
-                                            setBox(map, bounds);
                                         }
                                     });
                                     mapPanel.map.addControl(control);
@@ -1341,47 +1351,12 @@ Ext.onReady(function() {
                             },
                             //actions["makeLcp"]
                             new Ext.Button({
-                                text: OpenLayers.i18n("Edit"),
+                                text: OpenLayers.i18n('Edit'),
                                 formBind: true, // If form validation fails disable the button
                                 //xtype: 'button',
-                                tooltip: OpenLayers.i18n("Edit the land use"),
+                                tooltip: OpenLayers.i18n('Edit the land use'),
                                 handler: function() {
                                     not_implemented();
-                                    /*
-                                    var terreinid = Gmi.Session.terreinid; //Ext.getCmp("terrein_id").getValue();
-                                    var landscapename = Ext.getCmp("fuelmodel_name").getValue();
-                                    if (! terreinid) {
-                                        alert(OpenLayers.i18n('Landscape file cannot be prepared yet.'));
-                                    } else {
-                                        // maak landschap ('lcp') voor model aan
-                                        startProgress(OpenLayers.i18n('makelcp'));
-                                        Ext.Ajax.request({
-                                            url: '/geoserver/ows?', //service=WPS&request=execute&version=1.0.0&identifier=py:wildfire_makelcp&datainputs=userid=' + userid + ';terreinid=' + terreinid + ';landscapename=' + landscapename + ';&RawDataOutput=string&mimeType=application/json',
-                                            params: {
-                                                service: 'WPS',
-                                                version: '1.1.0',
-                                                request: 'execute',
-                                                identifier: 'py:wildfire_makelcp',
-                                                datainputs: combineParams({
-                                                    userid: Gmi.Session.userid,
-                                                    terreinid: terreinid,
-                                                    landscapename: landscapename
-                                                }, ';'),
-                                                RawDataOutput: 'string',
-                                                mimeType: 'application/json'
-                                            },
-                                            extraParams: {
-                                                count: 0
-                                            },
-                                            on_finished: function(out_params) {
-                                                // bewaar id van fuelmodel
-                                                Gmi.Session.fuelid = out_params.runid;
-                                            },
-                                            success: wpsSuccessCallback,
-                                            failure: wpsFailureCallback
-                                        });
-                                    }
-                                    */
                                 },
                                 cls: 'g-actie-knop'
                             }),
@@ -2107,7 +2082,60 @@ function combineParams(o, sep) {
         s += key + '=' + o[key] + sep;
     }
     return s;
-}
+};
+
+function areaWithUnit(a) {
+    var area_units = { 'km²': 6, 'ha': 4, 'are': 2, 'm²': 0 };
+    var a10pow = Math.log(a)/Math.LN10;
+    var unit = null;
+    for (unit in area_units) {
+        if (area_units[unit] < a10pow) {
+            a10pow -= area_units[unit];
+            break;
+        }
+    }
+    return Math.pow(10, a10pow).toPrecision(3) + ' ' + unit;
+};
+
+var measureTip = {
+    
+    show: function(str) {
+        var el = document.getElementById('measure-tip');
+        if (! el) {
+            if (jQuery) {
+                jQuery('body').append('<div id="measure-tip" style="border: solid; background-color: white; position: absolute; top: 300px; z-index: 1020; padding: 4px;"></div>');
+            } else {
+                el = document.createElement('div');
+                el.id = 'measure-tip';
+                el.style.border = 'solid';
+                el.style.backgroundColor = 'white';
+                el.style.position = 'absolute';
+                el.style.height = '20px';
+                el.style.width = '300px';
+                el.style.left = '500px';
+                el.style.top = '300px';
+                document.getElementsByTagName('body')[0].appendChild(el);
+            }
+        } else {
+            // bestaat al, zichtbaar maken
+            el.style.display = 'inline';
+        }
+        if (str) {
+            el.innerHTML = str;
+        }
+    },
+    
+    hide: function() {
+        var el = document.getElementById('measure-tip');
+        if (el) {
+            if (jQuery) {
+                jQuery('#measure-tip').remove();
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    }
+};
 
 //-->
         </script>
