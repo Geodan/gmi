@@ -24,7 +24,7 @@
 	<!-- Proj resources -->
 	<script type="text/javascript" src="externals/proj4js_combined.js"></script>
         
-        <script type="text/javascript" src="externals/OpenLayers-2.12/OpenLayers.js"></script>
+        <script type="text/javascript" src="externals/OpenLayers-2.12/lib/OpenLayers.js"></script>
         <script type="text/javascript" src="externals/OpenLayers-2.12/lib/OpenLayers/Lang/nl.js"></script>
         <link rel="stylesheet" type="text/css" href="externals/OpenLayers-2.12/theme/default/style.css" />
         <!-- GeoExt -->
@@ -54,7 +54,7 @@ if (typeof String.prototype.startsWith !== 'function') {
         <script>
 //<!--
 // settings
-Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Services.WPS');
+Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Data', 'Gmi.Services.WPS');
 
 Gmi.Settings.openLayers_imgPath = 'img/';
 Gmi.Settings.openLayers_proxyHost = 'proxy.php?url=';
@@ -63,12 +63,79 @@ Gmi.Settings.tijd_afronding_minuten = 5;
 Gmi.Settings.operationalMode = 1;
 Gmi.Settings.dateFormat = 'Y-m-d';
 Gmi.Settings.decimalSeparator = ',';
+Gmi.Settings.maxZoomOnMoveToTerrain = 13;
 
 Gmi.Session.userid = '0';
 Gmi.Version = '0.1';
 
 OpenLayers.imgPath = Gmi.Settings.openLayers_imgPath;
 OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
+
+// data
+
+Gmi.Data.fuels = {
+  "count": 58,
+  "types": [
+    {"fuel_id": "1", "description": "GR1 | Short grass"},
+    {"fuel_id": "2", "description": "GR2 | Timber grass and understory"},
+    {"fuel_id": "3", "description": "GR3 | Tall grass"},
+    {"fuel_id": "4", "description": "SH4 | Chaparral"},
+    {"fuel_id": "5", "description": "SH5 | Brush"},
+    {"fuel_id": "6", "description": "SH6 | Dormant brush"},
+    {"fuel_id": "7", "description": "SH7 | Southern rough"},
+    {"fuel_id": "8", "description": "TL8 | Compact timber litter"},
+    {"fuel_id": "9", "description": "TL9 | Hardwoord litter"},
+    {"fuel_id": "10", "description": "TU10 | Timber litter and understory"},
+    {"fuel_id": "11", "description": "SB11 | Light slash"},
+    {"fuel_id": "12", "description": "SB12 | Medium slash"},
+    {"fuel_id": "13", "description": "SB13 | Heavy slash"},
+    {"fuel_id": "91", "description": "NB91 | Urban\/suburban"},
+    {"fuel_id": "92", "description": "NB92 | Snow\/Ice"},
+    {"fuel_id": "93", "description": "NB93 | Agricultural field"},
+    {"fuel_id": "98", "description": "NB98 | Open water"},
+    {"fuel_id": "99", "description": "NB99 | Bear ground"},
+    {"fuel_id": "101", "description": "GR101 | Short, sparse dry climate grass"},
+    {"fuel_id": "102", "description": "GR102 | Low load dry climate grass"},
+    {"fuel_id": "103", "description": "GR103 | Low load very coarse humid climate grass"},
+    {"fuel_id": "104", "description": "GR104 | Moderate load dry climate grass"},
+    {"fuel_id": "105", "description": "GR105 | Low load humid climate grass"},
+    {"fuel_id": "106", "description": "GR106 | Moderate load humid climate grass"},
+    {"fuel_id": "107", "description": "GR107 | High load dry climate grass"},
+    {"fuel_id": "108", "description": "GR108 | High load very coarse humid climate grass"},
+    {"fuel_id": "109", "description": "GR109 | Very high load humid climate grass"},
+    {"fuel_id": "121", "description": "GS121 | Low load dry climate grass-shrub"},
+    {"fuel_id": "122", "description": "GS122 | Moderate load dry climate grass-shrub"},
+    {"fuel_id": "123", "description": "GS123 | Moderate load humid climate grass-shrub"},
+    {"fuel_id": "124", "description": "GS124 | High load humid climate grass-shrub"},
+    {"fuel_id": "141", "description": "SH141 | Low load dry climate shrub"},
+    {"fuel_id": "142", "description": "SH142 | Moderate load dry climate shrub"},
+    {"fuel_id": "143", "description": "SH143 | Moderate load humid climate shrub"},
+    {"fuel_id": "144", "description": "SH144 | Low load humid climate timber shrub"},
+    {"fuel_id": "145", "description": "SH145 | High load dry climate shrub"},
+    {"fuel_id": "146", "description": "SH146 | Low load humid climate shrub"},
+    {"fuel_id": "147", "description": "SH147 | Very high load dry climate shrub"},
+    {"fuel_id": "148", "description": "SH148 | High load humid climate shrub"},
+    {"fuel_id": "149", "description": "SH149 | Very high load humid climate shrub"},
+    {"fuel_id": "161", "description": "TU161 | Ligh load dry climate timber-grass-shrub"},
+    {"fuel_id": "162", "description": "TU162 | Moderate load humid climate timber-shrub"},
+    {"fuel_id": "163", "description": "TU163 | Moderate load humid climate timber-grass-shrub"},
+    {"fuel_id": "164", "description": "TU164 | Dwarf conifer with understory"},
+    {"fuel_id": "165", "description": "TU165 | Very high load dry climate timber-shrub"},
+    {"fuel_id": "181", "description": "TL181 | Low load compact conifer litter"},
+    {"fuel_id": "182", "description": "TL182 | Low load broadleaf litter"},
+    {"fuel_id": "183", "description": "TL183 | Moderate load conifer litter"},
+    {"fuel_id": "184", "description": "TL184 | Small downed logs"},
+    {"fuel_id": "185", "description": "TL185 | High load conifer litter"},
+    {"fuel_id": "186", "description": "TL186 | Moderate load broadleaf litter"},
+    {"fuel_id": "187", "description": "TL187 | Large downed logs"},
+    {"fuel_id": "188", "description": "TL188 | Long-needle litter"},
+    {"fuel_id": "189", "description": "TL189 | Very high load broadleaf litter"},
+    {"fuel_id": "201", "description": "SB201 | Low load avtivity fuel"},
+    {"fuel_id": "202", "description": "SB202 | Moderate load activ. fuel or low load blowdown"},
+    {"fuel_id": "203", "description": "SB203 | High load activ. fuel or mod. load blowdown"},
+    {"fuel_id": "204", "description": "SB204 | High load blowdown"}
+  ]
+};
 
 // Models
 Gmi.Services.WPS = {
@@ -1047,13 +1114,22 @@ Ext.onReady(function() {
                     console.log('rowselect', row.data.feature);
                     var geom = row.data.feature.geometry;
                     var center = geom.getCentroid();
-                    mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
+                    var bounds = geom.getBounds();
+                    
+                    // zetten van box
+                    setBox(mapPanel.map, bounds);
                     
                     var datetime = new Date(row.data.feature.attributes['started']);
                     
-                    // zetten van box
-                    var bounds = geom.getBounds();
-                    setBox(mapPanel.map, bounds);
+                    // pan to extent
+                    //mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
+                    // zoom naar extent
+                    var zoom = mapPanel.map.getZoomForExtent(bounds);
+                    if (zoom > Gmi.Settings.maxZoomOnMoveToTerrain) {
+                        zoom = Gmi.Settings.maxZoomOnMoveToTerrain;
+                    }
+                    //mapPanel.map.zoomToExtent(bounds);
+                    mapPanel.map.moveTo(new OpenLayers.LonLat(center.x, center.y), zoom);
 
                     // zetten van fuelmodel_name
                     Ext.getCmp('fuelmodel_name').setValue(row.data.feature.attributes['landscape_name']);
@@ -1305,8 +1381,10 @@ Ext.onReady(function() {
                                                 count: 0
                                             },
                                             on_finished: function(out_params) {
+                                                // TODO: laagnaam terugkrijgen van model
+                                                out_params.subset_name = 'model_wildfire:terrein_' + out_params.runid;
                                                 // toon terrein laag
-                                                showTerrein(map, out_params.runid);
+                                                showTerrein(map, out_params.runid, out_params.subset_name);
                                            },
                                            success: wpsSuccessCallback,
                                            failure: wpsFailureCallback
@@ -1354,9 +1432,17 @@ Ext.onReady(function() {
                                 text: OpenLayers.i18n('Edit'),
                                 formBind: true, // If form validation fails disable the button
                                 //xtype: 'button',
+                                enableToggle: true,
                                 tooltip: OpenLayers.i18n('Edit the land use'),
-                                handler: function() {
-                                    not_implemented();
+                                handler: function(b, e) {
+                                    var map = mapPanel.map;
+                                    if (b.pressed) {
+                                        // start editen
+                                        start_edit_subset(map);
+                                    } else {
+                                        // stop editen
+                                        stop_edit_subset(map);
+                                    }
                                 },
                                 cls: 'g-actie-knop'
                             }),
@@ -1728,7 +1814,7 @@ function setBox(map, bounds) {
     }
 };
 
-function showTerrein(map, terrein_id) {
+function showTerrein(map, terrein_id, layer_name) {
     // bewaar runid als terreinid
     Gmi.Session.terreinid = terrein_id;
     // verwijdere oude terreinen
@@ -1736,16 +1822,18 @@ function showTerrein(map, terrein_id) {
     /*for (var i = layers.length - 1; i >= 0; i--) {
         map.removeLayer(layers[i]);
     }*/
-    // voeg nieuwe terrein toe
-    var name = 'model_wildfire:terrein_' + terrein_id;
+    // voeg nieuwe terrein toe als WMS
+    if (! layer_name) {
+        layer_name = 'model_wildfire:terrein_' + terrein_id;
+    }
     if (layers.length > 0) {
         layers[0].mergeNewParams({
-            layers: name
+            layers: layer_name
         });
     } else {
         var layer = new OpenLayers.Layer.WMS('Terrein', 
         'http://model.geodan.nl/geoserver/wms?', {
-            layers: name,
+            layers: layer_name,
             transparent: true,
             format: 'image/png'
         }, {
@@ -2135,6 +2223,99 @@ var measureTip = {
             }
         }
     }
+};
+
+function start_edit_subset(map) {
+    //alert('start edit');
+    var layers = map.getLayersByName('Terrein');
+    if (layers.length !== 1) {
+        alert('Geen terrein beschikbaar');
+        return;
+    }
+    var layer = layers[0];
+    
+    /*
+    var select = new OpenLayers.Layer.Vector("Selection", {styleMap: 
+        new OpenLayers.Style(OpenLayers.Feature.Vector.style["select"])
+    });
+    var hover = new OpenLayers.Layer.Vector("Hover");
+    map.addLayers([hover, select]);
+
+    var control = new OpenLayers.Control.GetFeature({
+        protocol: OpenLayers.Protocol.WFS.fromWMSLayer(layer),
+        box: true,
+        hover: true,
+        multipleKey: "shiftKey",
+        toggleKey: "ctrlKey"
+    });
+    control.events.register("featureselected", this, function(e) {
+        select.addFeatures([e.feature]);
+    });
+    control.events.register("featureunselected", this, function(e) {
+        select.removeFeatures([e.feature]);
+    });
+    control.events.register("hoverfeature", this, function(e) {
+        hover.addFeatures([e.feature]);
+    });
+    control.events.register("outfeature", this, function(e) {
+        hover.removeFeatures([e.feature]);
+    });
+    map.addControl(control);
+    control.activate();
+    */
+   
+    var wfs_layer = new OpenLayers.Layer.Vector("Terrein (WFS)", {
+        //minScale: 15000000,
+        strategies: [new OpenLayers.Strategy.Fixed()],
+        projection: new OpenLayers.Projection('EPSG:4326'), // verschillend van kaart
+        protocol: new OpenLayers.Protocol.WFS({
+            url: "/geoserver/ows",
+            version: "1.1.0",
+            geometryName: 'geom',
+            srsName: 'EPSG:4326', // default
+            featureType: layer.params.LAYERS.split(':')[1],
+            featureNS: 'model_wildfire'
+        })
+    });
+    map.addLayer(wfs_layer);
+    
+    //var control = new OpenLayers.Control.ModifyFeature(wfs_layer);
+    //var controls = map.getControlsByClass('OpenLayers.Control.ModifyFeature');
+    var control = new OpenLayers.Control.SelectFeature(wfs_layer, {
+        hover: true,
+        //highlightOnly: true,
+        //renderIntent: "temporary"/*
+        renderers: OpenLayers.Layer.Vector.prototype.renderers
+        /*eventListeners: {
+            beforefeaturehighlighted: info ,
+            featurehighlighted: info ,
+            featureunhighlighted: info 
+        }*/
+    });
+    map.addControl(control);
+    control.activate();
+    
+    //controls[0].layers.push(wfs_layer);
+    //controls[0].activate();
+};
+
+function stop_edit_subset(map) {
+    //alert('stop edit');
+    var layers = map.getLayersByName('Terrein (WFS)');
+    if (layers.length === 0) {
+        return;
+    }
+
+    var wfs_layer = layers[0];
+    var controls = map.getControlsByClass('OpenLayers.Control.SelectFeature');
+    for (var i = 0; i < controls.length; i++) {
+        if (controls[i].layer === wfs_layer) {
+            map.removeControl(controls[i]);
+            console.log('wfs control removed');
+        }
+    }
+    map.removeLayer(wfs_layer);
+    console.log('wfs layer removed');
 };
 
 //-->

@@ -12,7 +12,7 @@
         var map, layer, select, hover, control;
 
         function init(){
-            OpenLayers.ProxyHost= "proxy.cgi?url=";
+            OpenLayers.ProxyHost= "/proxy.php?url=";
             map = new OpenLayers.Map('map', {
                 controls: [
                     new OpenLayers.Control.PanZoom(),
