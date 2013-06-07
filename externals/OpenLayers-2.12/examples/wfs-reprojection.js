@@ -1,5 +1,5 @@
 var map, layer, styleMap;
-OpenLayers.ProxyHost = "proxy.cgi?url=";
+OpenLayers.ProxyHost = "/proxy.php?url=";
 
 function init() {
 
@@ -10,9 +10,14 @@ function init() {
         projection: mercator
     });
 
-    var g = new OpenLayers.Layer.Google("Google Layer", {
-        sphericalMercator: true
-    });
+    var g;
+    if (typeof google !== 'undefined') {
+        g = new OpenLayers.Layer.Google("Google Layer", {
+            sphericalMercator: true
+        });
+    } else {
+        g = new OpenLayers.Layer.OSM();
+    }
     map.addLayers([g]);
 
     // prepare to style the data

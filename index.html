@@ -63,7 +63,7 @@ Gmi.Settings.tijd_afronding_minuten = 5;
 Gmi.Settings.operationalMode = 1;
 Gmi.Settings.dateFormat = 'Y-m-d';
 Gmi.Settings.decimalSeparator = ',';
-Gmi.Settings.maxZoomOnMoveToTerrain = 13;
+Gmi.Settings.maxZoomOnMoveToTerrain = 14; // 14 = 1:34K
 
 Gmi.Session.userid = '0';
 Gmi.Version = '0.1';
@@ -75,66 +75,66 @@ OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
 
 Gmi.Data.fuels = {
   "count": 58,
-  "types": [
-    {"fuel_id": "1", "description": "GR1 | Short grass"},
-    {"fuel_id": "2", "description": "GR2 | Timber grass and understory"},
-    {"fuel_id": "3", "description": "GR3 | Tall grass"},
-    {"fuel_id": "4", "description": "SH4 | Chaparral"},
-    {"fuel_id": "5", "description": "SH5 | Brush"},
-    {"fuel_id": "6", "description": "SH6 | Dormant brush"},
-    {"fuel_id": "7", "description": "SH7 | Southern rough"},
-    {"fuel_id": "8", "description": "TL8 | Compact timber litter"},
-    {"fuel_id": "9", "description": "TL9 | Hardwoord litter"},
-    {"fuel_id": "10", "description": "TU10 | Timber litter and understory"},
-    {"fuel_id": "11", "description": "SB11 | Light slash"},
-    {"fuel_id": "12", "description": "SB12 | Medium slash"},
-    {"fuel_id": "13", "description": "SB13 | Heavy slash"},
-    {"fuel_id": "91", "description": "NB91 | Urban\/suburban"},
-    {"fuel_id": "92", "description": "NB92 | Snow\/Ice"},
-    {"fuel_id": "93", "description": "NB93 | Agricultural field"},
-    {"fuel_id": "98", "description": "NB98 | Open water"},
-    {"fuel_id": "99", "description": "NB99 | Bear ground"},
-    {"fuel_id": "101", "description": "GR101 | Short, sparse dry climate grass"},
-    {"fuel_id": "102", "description": "GR102 | Low load dry climate grass"},
-    {"fuel_id": "103", "description": "GR103 | Low load very coarse humid climate grass"},
-    {"fuel_id": "104", "description": "GR104 | Moderate load dry climate grass"},
-    {"fuel_id": "105", "description": "GR105 | Low load humid climate grass"},
-    {"fuel_id": "106", "description": "GR106 | Moderate load humid climate grass"},
-    {"fuel_id": "107", "description": "GR107 | High load dry climate grass"},
-    {"fuel_id": "108", "description": "GR108 | High load very coarse humid climate grass"},
-    {"fuel_id": "109", "description": "GR109 | Very high load humid climate grass"},
-    {"fuel_id": "121", "description": "GS121 | Low load dry climate grass-shrub"},
-    {"fuel_id": "122", "description": "GS122 | Moderate load dry climate grass-shrub"},
-    {"fuel_id": "123", "description": "GS123 | Moderate load humid climate grass-shrub"},
-    {"fuel_id": "124", "description": "GS124 | High load humid climate grass-shrub"},
-    {"fuel_id": "141", "description": "SH141 | Low load dry climate shrub"},
-    {"fuel_id": "142", "description": "SH142 | Moderate load dry climate shrub"},
-    {"fuel_id": "143", "description": "SH143 | Moderate load humid climate shrub"},
-    {"fuel_id": "144", "description": "SH144 | Low load humid climate timber shrub"},
-    {"fuel_id": "145", "description": "SH145 | High load dry climate shrub"},
-    {"fuel_id": "146", "description": "SH146 | Low load humid climate shrub"},
-    {"fuel_id": "147", "description": "SH147 | Very high load dry climate shrub"},
-    {"fuel_id": "148", "description": "SH148 | High load humid climate shrub"},
-    {"fuel_id": "149", "description": "SH149 | Very high load humid climate shrub"},
-    {"fuel_id": "161", "description": "TU161 | Ligh load dry climate timber-grass-shrub"},
-    {"fuel_id": "162", "description": "TU162 | Moderate load humid climate timber-shrub"},
-    {"fuel_id": "163", "description": "TU163 | Moderate load humid climate timber-grass-shrub"},
-    {"fuel_id": "164", "description": "TU164 | Dwarf conifer with understory"},
-    {"fuel_id": "165", "description": "TU165 | Very high load dry climate timber-shrub"},
-    {"fuel_id": "181", "description": "TL181 | Low load compact conifer litter"},
-    {"fuel_id": "182", "description": "TL182 | Low load broadleaf litter"},
-    {"fuel_id": "183", "description": "TL183 | Moderate load conifer litter"},
-    {"fuel_id": "184", "description": "TL184 | Small downed logs"},
-    {"fuel_id": "185", "description": "TL185 | High load conifer litter"},
-    {"fuel_id": "186", "description": "TL186 | Moderate load broadleaf litter"},
-    {"fuel_id": "187", "description": "TL187 | Large downed logs"},
-    {"fuel_id": "188", "description": "TL188 | Long-needle litter"},
-    {"fuel_id": "189", "description": "TL189 | Very high load broadleaf litter"},
-    {"fuel_id": "201", "description": "SB201 | Low load avtivity fuel"},
-    {"fuel_id": "202", "description": "SB202 | Moderate load activ. fuel or low load blowdown"},
-    {"fuel_id": "203", "description": "SB203 | High load activ. fuel or mod. load blowdown"},
-    {"fuel_id": "204", "description": "SB204 | High load blowdown"}
-  ]
+  "types": {
+    "1": "GR1 | Short grass",
+    "2": "GR2 | Timber grass and understory",
+    "3": "GR3 | Tall grass",
+    "4": "SH4 | Chaparral",
+    "5": "SH5 | Brush",
+    "6": "SH6 | Dormant brush",
+    "7": "SH7 | Southern rough",
+    "8": "TL8 | Compact timber litter",
+    "9": "TL9 | Hardwoord litter",
+    "10": "TU10 | Timber litter and understory",
+    "11": "SB11 | Light slash",
+    "12": "SB12 | Medium slash",
+    "13": "SB13 | Heavy slash",
+    "91": "NB91 | Urban\/suburban",
+    "92": "NB92 | Snow\/Ice",
+    "93": "NB93 | Agricultural field",
+    "98": "NB98 | Open water",
+    "99": "NB99 | Bear ground",
+    "101": "GR101 | Short, sparse dry climate grass",
+    "102": "GR102 | Low load dry climate grass",
+    "103": "GR103 | Low load very coarse humid climate grass",
+    "104": "GR104 | Moderate load dry climate grass",
+    "105": "GR105 | Low load humid climate grass",
+    "106": "GR106 | Moderate load humid climate grass",
+    "107": "GR107 | High load dry climate grass",
+    "108": "GR108 | High load very coarse humid climate grass",
+    "109": "GR109 | Very high load humid climate grass",
+    "121": "GS121 | Low load dry climate grass-shrub",
+    "122": "GS122 | Moderate load dry climate grass-shrub",
+    "123": "GS123 | Moderate load humid climate grass-shrub",
+    "124": "GS124 | High load humid climate grass-shrub",
+    "141": "SH141 | Low load dry climate shrub",
+    "142": "SH142 | Moderate load dry climate shrub",
+    "143": "SH143 | Moderate load humid climate shrub",
+    "144": "SH144 | Low load humid climate timber shrub",
+    "145": "SH145 | High load dry climate shrub",
+    "146": "SH146 | Low load humid climate shrub",
+    "147": "SH147 | Very high load dry climate shrub",
+    "148": "SH148 | High load humid climate shrub",
+    "149": "SH149 | Very high load humid climate shrub",
+    "161": "TU161 | Ligh load dry climate timber-grass-shrub",
+    "162": "TU162 | Moderate load humid climate timber-shrub",
+    "163": "TU163 | Moderate load humid climate timber-grass-shrub",
+    "164": "TU164 | Dwarf conifer with understory",
+    "165": "TU165 | Very high load dry climate timber-shrub",
+    "181": "TL181 | Low load compact conifer litter",
+    "182": "TL182 | Low load broadleaf litter",
+    "183": "TL183 | Moderate load conifer litter",
+    "184": "TL184 | Small downed logs",
+    "185": "TL185 | High load conifer litter",
+    "186": "TL186 | Moderate load broadleaf litter",
+    "187": "TL187 | Large downed logs",
+    "188": "TL188 | Long-needle litter",
+    "189": "TL189 | Very high load broadleaf litter",
+    "201": "SB201 | Low load activity fuel",
+    "202": "SB202 | Moderate load activ. fuel or low load blowdown",
+    "203": "SB203 | High load activ. fuel or mod. load blowdown",
+    "204": "SB204 | High load blowdown"
+  }
 };
 
 // Models
@@ -2264,9 +2264,152 @@ function start_edit_subset(map) {
     control.activate();
     */
    
+    var styleMap = new OpenLayers.StyleMap({
+        "default": new OpenLayers.Style(OpenLayers.Util.applyDefaults({
+            cursor: 'pointer',
+            title: '${fuelLabel}',
+            graphicTitle: '${fuelLabel}'
+        }, OpenLayers.Feature.Vector.style["default"]), {
+            context: {
+                fuelLabel: function(feature) {
+                    return feature.attributes['fuel_id'];
+                }
+            }
+        }),
+        "select": new OpenLayers.Style(OpenLayers.Util.applyDefaults({
+            cursor: 'pointer',
+            title: '${fuelLabel}',
+            graphicTitle: '${fuelLabel}'
+        }, OpenLayers.Feature.Vector.style["select"]), {
+            context: {
+                fuelLabel: function(feature) {
+                    return feature.attributes['fuel_id'];
+                }
+            }
+        })
+    });
+
+    var saveStrategy = new OpenLayers.Strategy.Save({
+        // If true, features will be saved immediately after being added to the layer
+        // and with each modification or deletion.  If auto is a number, features
+        // will be saved on an interval provided by the value (in seconds).
+        auto: true
+    });
+    saveStrategy.events.register('fail', saveStrategy, function(evt) {
+        alert('save failed');
+    });
+    saveStrategy.events.register('success', saveStrategy, function(evt) {
+        alert('save succeeded');
+    });
+
+    var popup;
+    
+    function createPopup(feature) {
+        
+        var fuel_html = Gmi.Data.fuels.types[feature.attributes.fuel_id];
+        
+        if (popup) {
+            popup.close();
+            popup = null;
+        }
+        if (! popup) {
+            
+            var fuel_data = [];
+            for (var fuel_id in Gmi.Data.fuels.types) {
+                fuel_data.push([fuel_id, Gmi.Data.fuels.types[fuel_id]]);
+            }
+            
+            popup = new GeoExt.Popup({
+                title: 'My Popup',
+                id: 'wfs_popup',
+                location: feature,
+                map: map,
+                width: 300,
+                //anchored: true,
+                html: fuel_html,
+                maximizable: false,
+                collapsible: false,
+                items: [
+                    new Ext.form.ComboBox({
+                        id: 'wfs_fuel_list',
+                        fieldLabel: 'Fuel list',
+                        name: 'wfs_fuel_list',
+                        typeAhead: true,
+                        triggerAction: 'all',
+                        lazyRender: true,
+                        anchor: '100%',
+                        align: 'right',
+                        mode: 'local',
+                        value: feature.attributes.fuel_id,
+                        forceSelection: true, editable: false,
+                        store: new Ext.data.ArrayStore({
+                            id: 0,
+                            fields: [
+                                'id',
+                                'naam'
+                            ],
+                            data: fuel_data
+                        }),
+                        valueField: 'id',
+                        displayField: 'naam',
+                        listeners: {
+                            'select': function() {
+                                    //not_implemented();
+                                    console.log('select fuel_list')
+                                }
+                        }
+                    }),
+                    new Ext.Button({
+                        text: OpenLayers.i18n("Change"),
+                        //xtype: 'button',
+                        id: 'btn_save_wfs',
+                        tooltip: OpenLayers.i18n("todo"),
+                        handler: function(b, e) {
+                            feature.attributes.fuel_id = Ext.getCmp('wfs_fuel_list').getValue();
+                            console.log('todo: fuel_id wordt ', feature.attributes.fuel_id);
+                            feature.state = OpenLayers.State.UPDATE;
+                            feature.layer.events.triggerEvent('featuremodified', {feature: feature});
+                            feature.layer.events.triggerEvent("afterfeaturemodified", {
+                                feature: feature,
+                                modified: true
+                            });
+                        }
+                    })
+                ]
+            });
+            // unselect feature when the popup
+            // is closed
+            popup.on({
+                close: function() {
+                    console.log('close popup');
+                    popup = null;
+                    /*var vectorLayer = this.feature.layer;
+                    if (OpenLayers.Util.indexOf(vectorLayer.selectedFeatures,
+                                               this.feature) > -1) {
+                        selectCtrl.unselect(this.feature);
+                    }*/
+                }
+            });
+        }
+        /*popup.add({
+            xtype: 'box',
+            autoEl: {
+                html: fuel_html
+            }
+        });*/
+        
+        // reset the popup's location
+        //popup.location = feature;
+        
+        //popup.doLayout();
+        
+        // since the popup is anchored, calling show will move popup to this location
+        popup.show();
+    };
+
     var wfs_layer = new OpenLayers.Layer.Vector("Terrein (WFS)", {
         //minScale: 15000000,
-        strategies: [new OpenLayers.Strategy.Fixed()],
+        strategies: [new OpenLayers.Strategy.Fixed(), saveStrategy],
         projection: new OpenLayers.Projection('EPSG:4326'), // verschillend van kaart
         protocol: new OpenLayers.Protocol.WFS({
             url: "/geoserver/ows",
@@ -2275,7 +2418,14 @@ function start_edit_subset(map) {
             srsName: 'EPSG:4326', // default
             featureType: layer.params.LAYERS.split(':')[1],
             featureNS: 'model_wildfire'
-        })
+        }),
+        styleMap: styleMap,
+        eventListeners: {
+            featureselected: function(evt) {
+                console.log('feature selected', evt.feature);
+                createPopup(evt.feature);
+            }
+        }
     });
     map.addLayer(wfs_layer);
     
@@ -2283,6 +2433,8 @@ function start_edit_subset(map) {
     //var controls = map.getControlsByClass('OpenLayers.Control.ModifyFeature');
     var control = new OpenLayers.Control.SelectFeature(wfs_layer, {
         hover: true,
+        multiple: false,
+        //clickout: true,
         //highlightOnly: true,
         //renderIntent: "temporary"/*
         renderers: OpenLayers.Layer.Vector.prototype.renderers
