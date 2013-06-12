@@ -134,6 +134,10 @@ Gmi.Data.fuels = {
     "202": "SB202 | Moderate load activ. fuel or low load blowdown",
     "203": "SB203 | High load activ. fuel or mod. load blowdown",
     "204": "SB204 | High load blowdown"
+  },
+  colors: {
+    "106": "#C25283", // heide paars?
+    "162": "#00FF00"  // bos groen
   }
 };
 
@@ -201,13 +205,95 @@ function stringToFloat(s) {
     return f;
 };
 
-function weatherTextToRecords(end_ymd, data) {
+function parseWeatherData(data) {
     var records = [];
 
+    // splits data in regels en verwijder commentaar en lege regels
+    // Uitgangspunt: datum is oplopend gesorteerd
+    var lines = data.split('\n').filter(function(line){return line.length > 0 && !line.startsWith('#');});
+    for (var i = 0; i < lines.length; i++) {
+        var tokens = lines[i].split(/[,\s]+/g).filter(function(token){return token.length > 0;});
+        //console.log(tokens);
+
+        //last_ymd = tokens[1];
+        records.push({
+            station: tokens[0],
+            date: Date.parseDate(tokens[1], 'Ymd'), // convert yyyymmdd to date?
+            tmin: parseFloat(tokens[2])/10,
+            hour1: parseInt(tokens[3]),
+            tmax: parseFloat(tokens[4])/10,
+            hour2: parseInt(tokens[5]),
+            hmin: parseFloat(tokens[6]),
+            hmax: parseFloat(tokens[8]),
+            precipitation: Math.max(0, stringToFloat(tokens[10])) / 10
+        });
+    }
+    return records;
+};
+
+function requestWeatherData(station, start_ymd, end_ymd) {
+    // NB: proxy nodig voor direct ophalen
+    //Ext.Ajax.request({
+    var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur, etmaalsom neerslag
+    var request = OpenLayers.Request.GET({
+        url: 'http://www.knmi.nl/klimatologie/daggegevens/getdata_dag.cgi',
+        async: false, // synchroon opvragen
+        params: {
+            stns: station,
+            vars: vars, // station,datum, ...
+            start: start_ymd,
+            end: end_ymd
+        },
+        success: function(response) {
+            var data = response.responseText; // bij OpenLayers request
+        }
+    });
+    //var text = request.responseText;
+    return parseWeatherData(request.responseText);
+    //return text;
+};
+
+function storeWeatherData(station, data) {
+    var key = station + '_station';
+    var value = localStorage[key];
+    if (value) {
+        value = JSON.parse(value); // meest onderscheidend vooraan
+    } else {
+        value = {};
+    }
+    for (var i = 0; i < data.length; i++) {
+        value[data[i].date.dateFormat('Ymd')] = data[i];
+    }
+    localStorage[key] = JSON.stringify(value);
+};
+
+function weatherDataToRecords(end_ymd, objs) {
+
+    //var objs = parseWeatherData(data);
+
+    var records = [];
+
+    var last_ymd = '00000000';
+    var last_obj = {};
+    for (var i = 0; i < objs.length; i++) {
+        var obj = objs[i];
+        if (obj.date > last_ymd) {
+            last_ymd = obj.date;
+            last_obj = obj;
+        }
+        records.push(new WeatherRecord(obj));
+    }
+    if (records.length > 0 && end_ymd !== last_ymd) {
+        // voeg laatste record toe met zelfde gegevens behalve datum
+        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, last_obj)));
+    }
+/*
     // splits data in regels en verwijder commentaar en lege regels
     // datum is oplopend gesorteerd
     var lines = data.split('\n').filter(function(line){return line.length > 0 && !line.startsWith('#');});
     var last_ymd = '00000000';
+    var last_rec = {};
+    
     for (var i = 0; i < lines.length; i++) {
         var tokens = lines[i].split(/[,\s]+/g).filter(function(token){return token.length > 0;});
         console.log(tokens);
@@ -228,13 +314,14 @@ function weatherTextToRecords(end_ymd, data) {
     if (records.length > 0 && end_ymd !== last_ymd) {
         // voeg laatste record toe met zelfde gegevens behalve datum
         records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, records[records.length-1].data)));
-    }
+    }*/
     return records;
 }
 
 var climateStations = [];
 
 function getClimateData(station) {
+
     //var today = Ext.util.Format.date(new Date(), 'Ymd');
     var end = Ext.getCmp('model_date').getValue();
     //end.setDate(end.getDate() + 1); // ook morgen
@@ -244,8 +331,22 @@ function getClimateData(station) {
     start.setDate(end.getDate() - 6);
     var start_ymd = start.dateFormat('Ymd');
     
-    var today = new Date();
+    // al in sessie aanwezig?
+    //Gmi.Data
     
+    // read from local storage
+    var data = localStorage[station + 'station'];
+    if (data) {
+        data = JSON.parse(); // meest onderscheidend vooraan
+    }
+    if (!data || !data[start_ymd]) {
+        // probeer in te lezen
+    }
+
+    var data = requestWeatherData(station, start_ymd, end_ymd);
+    storeWeatherData(station, data);
+    return weatherDataToRecords(end_ymd, data);
+/*
     // NB: proxy nodig voor direct ophalen
     //Ext.Ajax.request({
     var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur, etmaalsom neerslag
@@ -254,7 +355,7 @@ function getClimateData(station) {
         async: false, // synchroon opvragen
         params: {
             stns: station,
-            vars: 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH', // station,datum, ...
+            vars: vars, // station,datum, ...
             start: start_ymd,
             end: end_ymd
         },
@@ -264,6 +365,7 @@ function getClimateData(station) {
     });
     var text = request.responseText;
     return weatherTextToRecords(end_ymd, text);
+*/
 };
 
 function getWindData(station) {
@@ -2268,11 +2370,18 @@ function start_edit_subset(map) {
         "default": new OpenLayers.Style(OpenLayers.Util.applyDefaults({
             cursor: 'pointer',
             title: '${fuelLabel}',
-            graphicTitle: '${fuelLabel}'
+            graphicTitle: '${fuelLabel}',
+            fillColor: '${fillColor}'
         }, OpenLayers.Feature.Vector.style["default"]), {
             context: {
                 fuelLabel: function(feature) {
                     return feature.attributes['fuel_id'];
+                },
+                fillColor: function(feature) {
+                    if (Gmi.Data.fuels.colors[feature.attributes['fuel_id']]) {
+                        return Gmi.Data.fuels.colors[feature.attributes['fuel_id']];
+                    }
+                    return '#ee9900';
                 }
             }
         }),
@@ -2289,6 +2398,8 @@ function start_edit_subset(map) {
         })
     });
 
+    var popup, wfs_layer, control;
+    
     var saveStrategy = new OpenLayers.Strategy.Save({
         // If true, features will be saved immediately after being added to the layer
         // and with each modification or deletion.  If auto is a number, features
@@ -2299,11 +2410,13 @@ function start_edit_subset(map) {
         alert('save failed');
     });
     saveStrategy.events.register('success', saveStrategy, function(evt) {
+        if (popup) {
+            popup.close();
+        }
+        control.unselectAll();
         alert('save succeeded');
     });
 
-    var popup;
-    
     function createPopup(feature) {
         
         var fuel_html = Gmi.Data.fuels.types[feature.attributes.fuel_id];
@@ -2320,7 +2433,7 @@ function start_edit_subset(map) {
             }
             
             popup = new GeoExt.Popup({
-                title: 'My Popup',
+                title: OpenLayers.i18n('Edit feature'),
                 id: 'wfs_popup',
                 location: feature,
                 map: map,
@@ -2407,7 +2520,7 @@ function start_edit_subset(map) {
         popup.show();
     };
 
-    var wfs_layer = new OpenLayers.Layer.Vector("Terrein (WFS)", {
+    wfs_layer = new OpenLayers.Layer.Vector("Terrein (WFS)", {
         //minScale: 15000000,
         strategies: [new OpenLayers.Strategy.Fixed(), saveStrategy],
         projection: new OpenLayers.Projection('EPSG:4326'), // verschillend van kaart
@@ -2431,8 +2544,8 @@ function start_edit_subset(map) {
     
     //var control = new OpenLayers.Control.ModifyFeature(wfs_layer);
     //var controls = map.getControlsByClass('OpenLayers.Control.ModifyFeature');
-    var control = new OpenLayers.Control.SelectFeature(wfs_layer, {
-        hover: true,
+    control = new OpenLayers.Control.SelectFeature(wfs_layer, {
+        hover: false,
         multiple: false,
         //clickout: true,
         //highlightOnly: true,
