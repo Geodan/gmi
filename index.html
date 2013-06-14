@@ -669,7 +669,7 @@ var weatherStore = new Ext.data.Store({
             if (weatherStore.modified.length > 0) {
                 // opslaan store indien er gewijzigde records zijn
                 console.log('modified', weatherStore.modified);
-                var dataset = []
+                var dataset = [];
                 for (var i = 0; i < weatherStore.modified.length; i++) {
                     dataset.push(weatherStore.modified[i].data);
                 }
@@ -930,7 +930,143 @@ Ext.onReady(function() {
 
     window.addEventListener('online', online, false);
     window.addEventListener('offline', offline, false);
-    
+
+    Gmi.defineTerrainWfsGrid = function() {
+        var map = mapPanel.map;
+        var layers = map.getLayersByName('wfs_vector_landscapes');
+        if (layers.length > 0) {
+            var wfsLayer = layers[0];
+        } else {
+            // wfs kaartlaag toevoegen
+            var wfsLayer = new OpenLayers.Layer.Vector("wfs_vector_landscapes", {
+                //rendererOptions: {
+                //    zIndexing: true
+                displayInLayerSwitcher: false,
+                visibility: false, // NIET zichtbaar
+                styleMap: new OpenLayers.StyleMap({
+                    'default': new OpenLayers.Style({
+                        //display: 'none',
+                        fillColor: '#aaaaaa',
+                        fillOpacity: 0.2,
+                        strokeColor: '#888888',
+                        strokeOpacity: 0.4
+                    }),
+                    'select': new OpenLayers.Style({
+                        fillColor: '#ff8800',
+                        fillOpacity: 0.6,
+                        strokeColor: '#ff0000',
+                        strokeOpacity: 0.6,
+                        strokeWidth: '3px',
+                        display: 'visible'
+                    })
+                })
+            });
+            // TODO: voor wfs laag alleen geselecteerde feature tonen!
+            mapPanel.map.addLayer(wfsLayer);
+        }
+        // create feature store, binding it to the vector layer
+        var store = new GeoExt.data.FeatureStore({
+            layer: wfsLayer,
+            /*fields: [
+                {name: 'landscape_name', type: 'string'},
+                {name: 'started', type: 'date'}
+            ],*/
+            //recordType: TerrainFeatureRecord,
+            reader: new GeoExt.data.FeatureReader({}, TerrainFeatureRecord),
+            proxy: new GeoExt.data.ProtocolProxy({
+                protocol: new OpenLayers.Protocol.WFS({
+                    url: "/geoserver/ows",
+                    version: "1.1.0",
+                    featureType: 'landscapes',
+                    featureNS: 'model_wildfire',
+                    srsName: 'EPSG:900913'//,
+                    //outputFormat: 'application/json', // richting geoserver
+                    //format: new OpenLayers.Format.GeoJSON() // ??
+                })
+            }),
+            autoLoad: true
+        });
+        console.log('Store', store);
+        // create grid panel configured with feature store
+        gridPanel = new Ext.grid.GridPanel({
+            title: "Feature Grid",
+            applyTo: "desc",
+            region: "east",
+            store: store,
+            width: 320,
+            height: 200,
+            columns: [{
+                header: "Naam",
+                width: 200,
+                sortable: true,
+                dataIndex: "landscape_name"
+            }, {
+                header: 'Begintijd',
+                width: 200,
+                sortable: true,
+                dataIndex: 'started'
+            }],
+            sm: new GeoExt.grid.FeatureSelectionModel({
+                autoPanMapOnSelection: false, // we zoomen er zelf naartoe
+                singleSelect: true
+            })
+        });
+
+        gridPanel.store.bind(wfsLayer);
+        gridPanel.getSelectionModel().bind(wfsLayer);
+        gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
+            console.log('rowselect', row.data.feature);
+            var geom = row.data.feature.geometry;
+            var center = geom.getCentroid();
+            var bounds = geom.getBounds();
+
+            // zetten van box
+            setBox(mapPanel.map, bounds);
+
+            var datetime = new Date(row.data.feature.attributes['started']);
+
+            // pan to extent
+            //mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
+            // zoom naar extent
+            var zoom = mapPanel.map.getZoomForExtent(bounds);
+            if (zoom > Gmi.Settings.maxZoomOnMoveToTerrain) {
+                zoom = Gmi.Settings.maxZoomOnMoveToTerrain;
+            }
+            //mapPanel.map.zoomToExtent(bounds);
+            mapPanel.map.moveTo(new OpenLayers.LonLat(center.x, center.y), zoom);
+
+            // zetten van fuelmodel_name
+            Ext.getCmp('fuelmodel_name').setValue(row.data.feature.attributes['landscape_name']);
+
+            // zetten van model_date en model_time
+            setModelDateTime(datetime);
+
+            // terrein laag (landscape_id) zetten? makkelijker bij testen
+            showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
+
+            // tijd van neerslagradar
+            time = new Date(datetime.getTime() - datetime.getTime() % (5*60*1000)); // round to 5 minutes
+            console.log('tijd afgerond', time);
+            var map = row.data.feature.layer.map;
+            var layers = map.getLayersByName('KNMI Neerslagradar');
+            if (layers.length > 0) {
+                var layer = layers[0];
+                layer.mergeNewParams({time: time.toISOString()});
+            }
+        }, gridPanel);
+
+        // create a panel and add the map panel and grid panel
+        // inside it
+        /*mainPanel = new Ext.Panel({
+            renderTo: "mainpanel",
+            layout: "border",
+            height: 400,
+            width: 920,
+            items: [mapPanel, gridPanel]
+        });*/
+        return gridPanel;
+    };
+            
     // create a vector layer for drawing
     var wildfire_layer = new OpenLayers.Layer.Vector('Wildfire lines', {
         displayInLayerSwitcher: false,
@@ -1292,7 +1428,7 @@ Ext.onReady(function() {
                     console.log('toggle legendgraphic', node);
                     if (jQuery('.g-legendgraphic', event.target.parentNode.parentNode).length >= 1) {
                         jQuery('.g-legendgraphic', event.target.parentNode.parentNode).remove();
-                    } else {
+                    } else if (node.layer.CLASS_NAME === 'OpenLayers.Layer.WMS') {
                         var legendGraphicUrl;
                         if (node.layer.legend && node.layer.legend.url) {
                             legendGraphicUrl = node.layer.legend.url;
@@ -1318,143 +1454,10 @@ Ext.onReady(function() {
                 //treeConfigWin.show();
                 //Ext.getCmp("treeconfig").setValue(treeConfig);
             }
-        }, */{
+        }, * {
             text: OpenLayers.i18n('Wfs Grid'),
-            handler: function() {
-                var map = mapPanel.map;
-                var layers = map.getLayersByName('wfs_vector_landscapes');
-                if (layers.length > 0) {
-                    var wfsLayer = layers[0];
-                } else {
-                    // wfs kaartlaag toevoegen
-                    var wfsLayer = new OpenLayers.Layer.Vector("wfs_vector_landscapes", {
-                        //rendererOptions: {
-                        //    zIndexing: true
-                        displayInLayerSwitcher: false,
-                        visibility: false,
-                        styleMap: new OpenLayers.StyleMap({
-                            'default': new OpenLayers.Style({
-                                //display: 'none',
-                                fillColor: '#aaaaaa',
-                                fillOpacity: 0.2,
-                                strokeColor: '#888888',
-                                strokeOpacity: 0.4
-                            }),
-                            'select': new OpenLayers.Style({
-                                fillColor: '#ff8800',
-                                fillOpacity: 0.6,
-                                strokeColor: '#ff0000',
-                                strokeOpacity: 0.6,
-                                strokeWidth: '3px',
-                                display: 'visible'
-                            })
-                        })
-                    });
-                    // TODO: voor wfs laag alleen geselecteerde feature tonen!
-                    mapPanel.map.addLayer(wfsLayer);
-                }
-                // create feature store, binding it to the vector layer
-                var store = new GeoExt.data.FeatureStore({
-                    layer: wfsLayer,
-                    /*fields: [
-                        {name: 'landscape_name', type: 'string'},
-                        {name: 'started', type: 'date'}
-                    ],*/
-                    //recordType: TerrainFeatureRecord,
-                    reader: new GeoExt.data.FeatureReader({}, TerrainFeatureRecord),
-                    proxy: new GeoExt.data.ProtocolProxy({
-                        protocol: new OpenLayers.Protocol.WFS({
-                            url: "/geoserver/ows",
-                            version: "1.1.0",
-                            featureType: 'landscapes',
-                            featureNS: 'model_wildfire',
-                            srsName: 'EPSG:900913'//,
-                            //outputFormat: 'application/json', // richting geoserver
-                            //format: new OpenLayers.Format.GeoJSON() // ??
-                        })
-                    }),
-                    autoLoad: true
-                });
-                console.log('Store', store);
-                // create grid panel configured with feature store
-                gridPanel = new Ext.grid.GridPanel({
-                    title: "Feature Grid",
-                    applyTo: "desc",
-                    region: "east",
-                    store: store,
-                    width: 320,
-                    height: 400,
-                    columns: [{
-                        header: "Naam",
-                        width: 200,
-                        sortable: true,
-                        dataIndex: "landscape_name"
-                    }, {
-                        header: 'Begintijd',
-                        width: 200,
-                        sortable: true,
-                        dataIndex: 'started'
-                    }],
-                    sm: new GeoExt.grid.FeatureSelectionModel({
-                        autoPanMapOnSelection: false, // we zoomen er zelf naartoe
-                        singleSelect: true
-                    })
-                });
-                
-                gridPanel.store.bind(wfsLayer);
-                gridPanel.getSelectionModel().bind(wfsLayer);
-                gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
-                    console.log('rowselect', row.data.feature);
-                    var geom = row.data.feature.geometry;
-                    var center = geom.getCentroid();
-                    var bounds = geom.getBounds();
-                    
-                    // zetten van box
-                    setBox(mapPanel.map, bounds);
-                    
-                    var datetime = new Date(row.data.feature.attributes['started']);
-                    
-                    // pan to extent
-                    //mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
-                    // zoom naar extent
-                    var zoom = mapPanel.map.getZoomForExtent(bounds);
-                    if (zoom > Gmi.Settings.maxZoomOnMoveToTerrain) {
-                        zoom = Gmi.Settings.maxZoomOnMoveToTerrain;
-                    }
-                    //mapPanel.map.zoomToExtent(bounds);
-                    mapPanel.map.moveTo(new OpenLayers.LonLat(center.x, center.y), zoom);
-
-                    // zetten van fuelmodel_name
-                    Ext.getCmp('fuelmodel_name').setValue(row.data.feature.attributes['landscape_name']);
-        
-                    // zetten van model_date en model_time
-                    setModelDateTime(datetime);
-                    
-                    // terrein laag (landscape_id) zetten? makkelijker bij testen
-                    showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
-                    
-                    // tijd van neerslagradar
-                    time = new Date(datetime.getTime() - datetime.getTime() % (5*60*1000)); // round to 5 minutes
-                    console.log('tijd afgerond', time);
-                    var map = row.data.feature.layer.map;
-                    var layers = map.getLayersByName('KNMI Neerslagradar');
-                    if (layers.length > 0) {
-                        var layer = layers[0];
-                        layer.mergeNewParams({time: time.toISOString()});
-                    }
-                }, gridPanel);
-
-                // create a panel and add the map panel and grid panel
-                // inside it
-                /*mainPanel = new Ext.Panel({
-                    renderTo: "mainpanel",
-                    layout: "border",
-                    height: 400,
-                    width: 920,
-                    items: [mapPanel, gridPanel]
-                });*/
-            }
-        }]
+            handler: Gmi.defineTerrainWfsGrid
+        }*/]
     });
     
     var modelPanel = new Ext.Panel({
@@ -1794,13 +1797,24 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
+                            id: 'subset-fieldset',
                             title: OpenLayers.i18n('Subset'),
                             defaults: {
                                 width: 'inherited'
                             },
                             collapsible: true,
                             collapsed: true,
-                            items: []
+                            items: [
+                                //gridPanel // wfs grid panel
+                            ],
+                            listeners: {
+                                'beforeexpand': function(comp, event) {
+                                    if (comp.items.length == 0) {
+                                        var wfsGrid = Gmi.defineTerrainWfsGrid();
+                                        comp.add( wfsGrid );
+                                    }
+                                }
+                            }
                         },
                         {
                             xtype: 'fieldset',
@@ -1917,7 +1931,7 @@ Ext.onReady(function() {
                             ]
                         }
                     ]
-                }),
+                })/*,
                 new Ext.form.FormPanel({
                     title: 'Step 4 - Outputs',
                     collapsible: true,
@@ -1926,7 +1940,7 @@ Ext.onReady(function() {
                     },
                     html: '&lt;todo&gt;',
                     cls: 'empty'
-                })]
+                })*/]
             });
     var viewportItems = [mapPanel, tree, modelPanel];
     
