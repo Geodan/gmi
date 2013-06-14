@@ -233,6 +233,8 @@ function parseWeatherData(data) {
 
 function requestWeatherData(station, start_ymd, end_ymd) {
     // NB: proxy nodig voor direct ophalen
+    console.log('requestWeatherData', station, start_ymd, end_ymd);
+    
     //Ext.Ajax.request({
     var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur, etmaalsom neerslag
     var request = OpenLayers.Request.GET({
@@ -245,12 +247,27 @@ function requestWeatherData(station, start_ymd, end_ymd) {
             end: end_ymd
         },
         success: function(response) {
-            var data = response.responseText; // bij OpenLayers request
+            //var data = response.responseText; // bij OpenLayers request
+            // niks, want synchroon
+        },
+        failure: function(xhr) {
+            console.log('request failure', arguments);
         }
     });
-    //var text = request.responseText;
-    return parseWeatherData(request.responseText);
-    //return text;
+    var data = [];
+    if (request.status == 200) {
+        data = parseWeatherData(request.responseText);
+    } else {
+        alert(OpenLayers.i18n("Failure: ${msg} (status ${status})", {status: request.status, msg: request.responseText}));
+    }
+    /*
+    var last_data = data[data.length - 1];
+    var today = new Date();
+    if (last_data.date.dateFormat('Ymd') < end_ymd && end_ymd == today.dateFormat('Ymd')) {
+        data.push(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, last_data));
+    }
+    */
+    return data;
 };
 
 function storeWeatherData(station, data) {
@@ -262,6 +279,7 @@ function storeWeatherData(station, data) {
         value = {};
     }
     for (var i = 0; i < data.length; i++) {
+        // element van data array opslaan in dict met yyyymmdd als key
         value[data[i].date.dateFormat('Ymd')] = data[i];
     }
     localStorage[key] = JSON.stringify(value);
@@ -269,56 +287,25 @@ function storeWeatherData(station, data) {
 
 function weatherDataToRecords(end_ymd, objs) {
 
-    //var objs = parseWeatherData(data);
-
     var records = [];
 
     var last_ymd = '00000000';
     var last_obj = {};
     for (var i = 0; i < objs.length; i++) {
         var obj = objs[i];
-        if (obj.date > last_ymd) {
-            last_ymd = obj.date;
+        var d_ymd = obj.date.dateFormat('Ymd');
+        if (d_ymd > last_ymd) {
+            last_ymd = d_ymd;
             last_obj = obj;
         }
-        records.push(new WeatherRecord(obj));
+        records.push(new WeatherRecord(obj, d_ymd));
     }
     if (records.length > 0 && end_ymd !== last_ymd) {
         // voeg laatste record toe met zelfde gegevens behalve datum
-        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, last_obj)));
+        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, last_obj), end_ymd));
     }
-/*
-    // splits data in regels en verwijder commentaar en lege regels
-    // datum is oplopend gesorteerd
-    var lines = data.split('\n').filter(function(line){return line.length > 0 && !line.startsWith('#');});
-    var last_ymd = '00000000';
-    var last_rec = {};
-    
-    for (var i = 0; i < lines.length; i++) {
-        var tokens = lines[i].split(/[,\s]+/g).filter(function(token){return token.length > 0;});
-        console.log(tokens);
-
-        last_ymd = tokens[1];
-        records.push(new WeatherRecord({
-            station: tokens[0],
-            date: Date.parseDate(tokens[1], 'Ymd'), // convert yyyymmdd to date?
-            tmin: parseFloat(tokens[2])/10,
-            hour1: parseInt(tokens[3]),
-            tmax: parseFloat(tokens[4])/10,
-            hour2: parseInt(tokens[5]),
-            hmin: parseFloat(tokens[6]),
-            hmax: parseFloat(tokens[8]),
-            precipitation: Math.max(0, stringToFloat(tokens[10])) / 10
-        }));
-    }
-    if (records.length > 0 && end_ymd !== last_ymd) {
-        // voeg laatste record toe met zelfde gegevens behalve datum
-        records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd')}, records[records.length-1].data)));
-    }*/
     return records;
 }
-
-var climateStations = [];
 
 function getClimateData(station) {
 
@@ -335,37 +322,65 @@ function getClimateData(station) {
     //Gmi.Data
     
     // read from local storage
-    var data = localStorage[station + 'station'];
-    if (data) {
-        data = JSON.parse(); // meest onderscheidend vooraan
-    }
-    if (!data || !data[start_ymd]) {
-        // probeer in te lezen
-    }
-
-    var data = requestWeatherData(station, start_ymd, end_ymd);
-    storeWeatherData(station, data);
-    return weatherDataToRecords(end_ymd, data);
-/*
-    // NB: proxy nodig voor direct ophalen
-    //Ext.Ajax.request({
-    var vars = 'TN:TNH:TX:TXH:UN:UNH:UX:UXH:RH'; // Minimum temperatuur, uur, maximum temp, uur, Minimale relatieve vochtigheid, uur, max rel vocht, uur, etmaalsom neerslag
-    var request = OpenLayers.Request.GET({
-        url: 'http://www.knmi.nl/klimatologie/daggegevens/getdata_dag.cgi',
-        async: false, // synchroon opvragen
-        params: {
-            stns: station,
-            vars: vars, // station,datum, ...
-            start: start_ymd,
-            end: end_ymd
-        },
-        success: function(response) {
-            var data = response.responseText; // bij OpenLayers request
+    var data = [];
+    var key = station + '_station';
+    var station_data = localStorage[key];
+    if (station_data) {
+        station_data = JSON.parse(station_data); // meest onderscheidend vooraan
+        if (station_data[start_ymd]) {
+            // ok, al aanwezig
+            var d = Date.parseDate(start_ymd, 'Ymd');
+            var last_d = Date.parseDate(end_ymd, 'Ymd');
+            while (d.getTime() <= last_d.getTime()) {
+                var d_ymd = d.dateFormat('Ymd');
+                if (station_data[d_ymd]) {
+                    // date omzetten van string naar object
+                    station_data[d_ymd]['date'] = new Date(station_data[d_ymd]['date']);
+                    
+                    data.push(station_data[d_ymd]);
+                } else {
+                    break;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            var today_ymd = new Date().clearTime().dateFormat('Ymd');
+            if (d.getTime() > last_d.getTime() || last_d.dateFormat('Ymd') == today_ymd) {
+                // alles al aanwezig
+                console.log('all climate data from local storage');
+                return weatherDataToRecords(end_ymd, data);
+            }
         }
-    });
-    var text = request.responseText;
-    return weatherTextToRecords(end_ymd, text);
-*/
+    }
+    
+    // probeer in te lezen
+    if (station === 0) {
+        // bouw array van weather data voor eigen gegevens
+        data = [];
+        // data voor eigen locatie, dus van start tot eind verzinnen
+        var d = Date.parseDate(start_ymd, 'Ymd');
+        var last_d = Date.parseDate(end_ymd, 'Ymd');
+        while (d <= last_d) {
+            var d_ymd = d.dateFormat('Ymd');
+            data.push({
+                station: station,
+                date: Date.parseDate(d_ymd, 'Ymd'), // convert yyyymmdd to date?
+                tmin: 0,
+                hour1: 5,
+                tmax: 0,
+                hour2: 14,
+                hmin: 50,
+                hmax: 100,
+                precipitation: 0 });
+            d.setDate(d.getDate() + 1);
+        }
+    } else {
+        // request array of weather data
+        data = requestWeatherData(station, start_ymd, end_ymd);
+    }
+    
+    storeWeatherData(station, data);
+    
+    return weatherDataToRecords(end_ymd, data);
 };
 
 function getWindData(station) {
@@ -542,13 +557,126 @@ var windColumnModel = new Ext.grid.ColumnModel({
     }]
 });
 
+Ext.data.LocalStorageWriter = Ext.extend(Ext.data.DataWriter, {
+    /**
+     * @cfg {Boolean} encode <p><tt>true</tt> to {@link Ext.util.JSON#encode JSON encode} the
+     * {@link Ext.data.DataWriter#toHash hashed data} into a standard HTTP parameter named after this
+     * Reader's <code>meta.root</code> property which, by default is imported from the associated Reader. Defaults to <tt>true</tt>.</p>
+     * <p>If set to <code>false</code>, the hashed data is {@link Ext.util.JSON#encode JSON encoded}, along with
+     * the associated {@link Ext.data.Store}'s {@link Ext.data.Store#baseParams baseParams}, into the POST body.</p>
+     * <p>When using {@link Ext.data.DirectProxy}, set this to <tt>false</tt> since Ext.Direct.JsonProvider will perform
+     * its own json-encoding.  In addition, if you're using {@link Ext.data.HttpProxy}, setting to <tt>false</tt>
+     * will cause HttpProxy to transmit data using the <b>jsonData</b> configuration-params of {@link Ext.Ajax#request}
+     * instead of <b>params</b>.</p>
+     * <p>When using a {@link Ext.data.Store#restful} Store, some serverside frameworks are
+     * tuned to expect data through the jsonData mechanism.  In those cases, one will want to set <b>encode: <tt>false</tt></b>, as in
+     * let the lower-level connection object (eg: Ext.Ajax) do the encoding.</p>
+     */
+    encode : true,
+    
+    /**
+     * @cfg {Boolean} encodeDelete False to send only the id to the server on delete, true to encode it in an object
+     * literal, eg: <pre><code>
+{id: 1}
+ * </code></pre> Defaults to <tt>false</tt>
+     */
+    encodeDelete: false,
+    
+    constructor : function(config) {
+        Ext.data.LocalStorageWriter.superclass.constructor.call(this, config);
+    },
+
+    /**
+     * <p>This method should not need to be called by application code, however it may be useful on occasion to
+     * override it, or augment it with an {@link Function#createInterceptor interceptor} or {@link Function#createSequence sequence}.</p>
+     * <p>The provided implementation encodes the serialized data representing the Store's modified Records into the Ajax request's
+     * <code>params</code> according to the <code>{@link #encode}</code> setting.</p>
+     * @param {Object} Ajax request params object to write into.
+     * @param {Object} baseParams as defined by {@link Ext.data.Store#baseParams}.  The baseParms must be encoded by the extending class, eg: {@link Ext.data.JsonWriter}, {@link Ext.data.XmlWriter}.
+     * @param {Object/Object[]} data Data object representing the serialized modified records from the Store. May be either a single object,
+     * or an Array of objects - user implementations must handle both cases.
+     *
+    render : function(params, baseParams, data) {
+        if (this.encode === true) {
+            // Encode here now.
+            Ext.apply(params, baseParams);
+            params[this.meta.root] = Ext.encode(data);
+        } else {
+            // defer encoding for some other layer, probably in {@link Ext.Ajax#request}.  Place everything into "jsonData" key.
+            var jdata = Ext.apply({}, baseParams);
+            jdata[this.meta.root] = data;
+            params.jsonData = jdata;
+        }
+    },*/
+    
+    /**
+     * Implements abstract Ext.data.DataWriter#createRecord
+     * @protected
+     * @param {Ext.data.Record} rec
+     * @return {Object}
+     */
+    createRecord : function(rec) {
+       console.log('createRecord', rec);
+       return this.toHash(rec);
+    },
+    
+    /**
+     * Implements abstract Ext.data.DataWriter#updateRecord
+     * @protected
+     * @param {Ext.data.Record} rec
+     * @return {Object}
+     */
+    updateRecord : function(rec) {
+        console.log('updateRecord', rec);
+        Ext.apply(this, {
+            meta: {
+                idProperty: 'id'
+            }
+        });
+        storeWeatherData(rec.data.station, [rec.data]);
+        return this.toHash(rec);
+    },
+    
+    /**
+     * Implements abstract Ext.data.DataWriter#destroyRecord
+     * @protected
+     * @param {Ext.data.Record} rec
+     * @return {Object}
+     */
+    destroyRecord : function(rec){
+        if (this.encodeDelete){
+            var data = {};
+            data[this.meta.idProperty] = rec.id;
+            return data;
+        } else {
+            return rec.id;
+        }
+    }
+});
+
 var weatherStore = new Ext.data.Store({
     id: 'weatherStore',
     autoSave: false,
     recordType: WeatherRecord,
     sortInfo: { field: "date", direction: "DESC" },
+//    proxy: {
+//        request: function() {} //Ext.emptyFn
+//    },
     reader: {
+        idProperty: 'id',
+        root: 'results',
         readRecords: function() {
+            if (weatherStore.modified.length > 0) {
+                // opslaan store indien er gewijzigde records zijn
+                console.log('modified', weatherStore.modified);
+                var dataset = []
+                for (var i = 0; i < weatherStore.modified.length; i++) {
+                    dataset.push(weatherStore.modified[i].data);
+                }
+                storeWeatherData(dataset[0].station, dataset);
+                //weatherStore.save();
+            }
+            
             var station = Ext.getCmp('weatherstation'); // naam zit in .lastSelectionText
             var records = getClimateData(station.value);
             if (records) {
@@ -559,11 +687,19 @@ var weatherStore = new Ext.data.Store({
             };
         }
     },
-    writer: new Ext.data.JsonWriter({
-        encode: true,
-        writeAllFields: false
+    writer: new Ext.data.LocalStorageWriter({
+        //encode: true,
+        //idProperty: 'id',
+        //root: 'results',
+        /*writeAllFields: false,
+        updateRecord: function(rec) {
+            console.log('updateRecord', rec); // data in rec.data, id in rec.id, rec.dirty?
+            storeWeatherData(rec.data.station, [rec.data]);
+            return this.toHash(rec);
+        }*/
     })
 });
+weatherStore.proxy = {request: Ext.emptyFn}; // hack om save() goed te laten gaan
 
 var windStore = new Ext.data.Store({
     id: 'windStore',
@@ -588,16 +724,24 @@ var windStore = new Ext.data.Store({
 var weatherGrid = new Ext.grid.EditorGridPanel({
     id: 'weathergrid',
     title: OpenLayers.i18n('Weather characteristics'),
+    header: false,
     store: weatherStore,
     clicksToEdit: 1,
+    viewConfig: {
+        forceFit: true
+    },
     cm: weatherColumnModel
 });
 
 var windGrid = new Ext.grid.EditorGridPanel({
     id: 'windgrid',
     title: OpenLayers.i18n('Wind characteristics'),
+    header: false,
     store: windStore,
     clicksToEdit: 1,
+    viewConfig: {
+        forceFit: true
+    },
     cm: windColumnModel
 });
 
@@ -616,10 +760,10 @@ var weathersettingsWindow = new Ext.Window({
     //width: '40%',
     //height: '600',
     plain: true,
-    layout: 'fit', // fit grid in window
+    //layout: 'vbox', // fit grid in window
     //modal: false,
     defaults: {
-        height: 100
+        //height: '50%'
     },
     items: [
         new Ext.form.ComboBox({
@@ -630,7 +774,8 @@ var weathersettingsWindow = new Ext.Window({
             triggerAction: 'all',
             lazyRender: true,
             anchor: '100%',
-            align: 'right',
+            //align: 'right',
+            region: 'north',
             mode: 'local',
             value: 275, // default: Deelen
             forceSelection: true, editable: false,
@@ -645,17 +790,41 @@ var weathersettingsWindow = new Ext.Window({
             valueField: 'id',
             displayField: 'naam',
             listeners: {
-                'select': function() {
-                        not_implemented();
-                    }
+                'select': function(combobox, event) {
+                    Ext.getCmp('weatherstation').setValue(event.data.id);
+                    weatherStore.loadData();
+                    console.log('select weather station', arguments);
+                }
             }
         }),
-        weatherGrid, 
-        windGrid
+        new Ext.TabPanel({
+            renderTo: Ext.getBody(),
+            activeTab: 0,
+            region: 'center',
+            //height: 400,
+            //align: 'stretch',
+            defaults: {
+                height: 300
+            },
+            items: [{
+                title: 'Weather',
+                layout: 'fit', // fit grid in window
+                items: [weatherGrid]
+            }, {
+                title: 'Wind',
+                layout: 'fit', // fit grid in window
+                items: [windGrid]
+            }]
+        })
+        //weatherGrid, 
+        //windGrid
     ],
     buttons:[{
         text: OpenLayers.i18n('Close'), 
         handler: function() {
+            if (weatherStore.modified.length > 0) {
+                weatherStore.save();
+            }
             weathersettingsWindow.hide();
         }
     }]
