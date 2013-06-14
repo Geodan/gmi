@@ -6,6 +6,14 @@
         Purpose of the stylesheet follows.
 */
 
+.g-legendgraphic img {
+    float: right;
+}
+
+li .x-tree-node {
+    display: inline;
+}
+
 .g-actie-knop {
     width: 100%
 }

@@ -1166,7 +1166,10 @@ Ext.onReady(function() {
                     visibility: false,
                     opacity: 0.6,
                     singleTile: true,
-                    transitionEffect: 'resize'
+                    transitionEffect: 'resize',
+                    legend: {
+                        url: "http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?SERVICE=WMS&&version=1.1.1&service=WMS&request=GetLegendGraphic&layer=RADNL_OPER_R___25PCPRR_L3_COLOR&format=image/png&STYLE=default&WIDTH=100"
+                    }
                 }),
             wildfire_layer,
             new OpenLayers.Layer.Boxes('_boxes_', {displayInLayerSwitcher: false})
@@ -1195,6 +1198,7 @@ Ext.onReady(function() {
         GeoExt.tree.LayerNodeUI, 
         new GeoExt.tree.TreeNodeUIEventMixin()
     );
+    
     var treeConfig = [{
         nodeType: "gx_baselayercontainer",
         expanded: true
@@ -1226,19 +1230,19 @@ Ext.onReady(function() {
         border: true,
         region: "west",
         title: OpenLayers.i18n("Layers"),
-        width: 200,
+        width: 240,
         split: true,
         collapsible: true,
         collapseMode: "mini",
         autoScroll: true,
         plugins: [
-            new GeoExt.plugins.TreeNodeRadioButton({
+            /*new GeoExt.plugins.TreeNodeRadioButton({
                 listeners: {
                     "radiochange": function(node) {
                         alert(OpenLayers.i18n("${layerName} is now the active layer.", {layerName: node.text}));
                     }
                 }
-            })/* plus */, {
+            }),*/ /*{ // plus
                 ptype: "gx_treenodecomponent"
             } /* */
         ],
@@ -1282,6 +1286,24 @@ Ext.onReady(function() {
             children: treeConfig
         },
         listeners: {
+            'click': function(node, event) {
+                if (jQuery(event.target).hasClass('gx-tree-layer-icon')) {
+                    // toggle legendgraphic
+                    console.log('toggle legendgraphic', node);
+                    if (jQuery('.g-legendgraphic', event.target.parentNode.parentNode).length >= 1) {
+                        jQuery('.g-legendgraphic', event.target.parentNode.parentNode).remove();
+                    } else {
+                        var legendGraphicUrl;
+                        if (node.layer.legend && node.layer.legend.url) {
+                            legendGraphicUrl = node.layer.legend.url;
+                        } else {
+                            legendGraphicUrl = node.layer.url + 'SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=' + node.layer.params.LAYERS;
+                        }
+                        jQuery(event.target.parentNode.parentNode).append('<div class="g-legendgraphic"><img src="' + legendGraphicUrl + '"></img></div>');
+                    }
+                }
+                //console.log('click', event.target);
+            },
             "radiochange": function(node){
                 alert(OpenLayers.i18n("${layerName} is now the active layer.", {layerName: node.layer.name}));
             }
@@ -2109,7 +2131,10 @@ function showTerrein(map, terrein_id, layer_name) {
             format: 'image/png'
         }, {
             isBaseLayer: false,
-            opacity: 0.6
+            opacity: 0.6,
+            legend: {
+                url: "/geoserver/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=" + layer_name
+            }
         });
         map.addLayer(layer);
    }
