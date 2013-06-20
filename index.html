@@ -55,7 +55,9 @@ if (typeof String.prototype.startsWith !== 'function') {
         <script>
 //<!--
 // settings
-Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Data', 'Gmi.Params', 'Gmi.Services.WPS');
+Ext.namespace('Gmi.Data', 'Gmi.Params', 'Gmi.Services', 'Gmi.Services.WPS', 'Gmi.Session', 'Gmi.Settings');
+
+Gmi.Settings.debug = (location.host === 'brand.localhost'); // alleen lokaal aan 
 
 // params in url
 Gmi.Params = Gmi.Params || {};
@@ -63,13 +65,8 @@ if (location.search !== '') {
   var search = location.search.substr(1); // remove ?
   var params = search.split('&');
   for (var i = 0; i < params.length; i++) {
-    if (params[i].indexOf('objectType=') === 0) {
-      Gmi.Params.objectType = params[i].substr(11);
-    }
-    if (params[i].indexOf('objectName=') === 0) {
-      // zie http://trac.openlayers.org/ticket/1704
-      Gmi.Params.objectName = decodeURIComponent(unescape(params[i].substr(11)));
-    }
+    var p = params[i].split('='); // todo: split op alleen 1ste =
+    Gmi.Params[p[0]] = (p.length <= 1 ? null : p[1]);
     
     if (params[i].indexOf('debug=true') === 0) {
       Gmi.Settings.debug = true;
@@ -327,20 +324,21 @@ function stringToFloat(s) {
     return f;
 };
 
-function parseWeatherData(data) {
-    var records = [];
+function parseWeatherData(data, start_ymd, end_ymd) {
 
     // splits data in regels en verwijder commentaar en lege regels
     // Uitgangspunt: datum is oplopend gesorteerd
+    var dict = {};
     var lines = data.split('\n').filter(function(line){return line.length > 0 && !line.startsWith('#');});
     for (var i = 0; i < lines.length; i++) {
         var tokens = lines[i].split(/[,\s]+/g).filter(function(token){return token.length > 0;});
         //console.log(tokens);
 
         //last_ymd = tokens[1];
-        records.push({
+        var d_ymd = tokens[1];
+        dict[d_ymd] = {
             station: tokens[0],
-            date: Date.parseDate(tokens[1], 'Ymd'), // convert yyyymmdd to date?
+            date: Date.parseDate(d_ymd, 'Ymd'), // convert yyyymmdd to date?
             tmin: parseFloat(tokens[2])/10,
             hour1: parseInt(tokens[3]),
             tmax: parseFloat(tokens[4])/10,
@@ -351,7 +349,20 @@ function parseWeatherData(data) {
             wind: stringToFloat(tokens[11])/10,
             windrichting: parseFloat(tokens[12]),
             isModified: 0
-        });
+        };
+    }
+    var start_ymdi = parseInt(start_ymd);
+    var end_ymdi = parseInt(end_ymd);
+    for (var ymdi = start_ymdi + 1; ymdi <= end_ymdi; ymdi++) {
+        var ymd = ymdi.toString();
+        if (!dict[ymd] && dict[(ymdi-1).toString()]) {
+            dict[ymd] = OpenLayers.Util.applyDefaults({date: Date.parseDate(ymd, 'Ymd'), isModified: 1}, dict[(ymdi-1).toString()]);
+            console.log('stationgegevens kopie van dag ervoor', dict[ymd]);
+        }
+    }
+    var records = [];
+    for (var d_ymd in dict) {
+        records.push(dict[d_ymd]);
     }
     return records;
 };
@@ -381,7 +392,7 @@ function requestWeatherData(station, start_ymd, end_ymd) {
     });
     var data = [];
     if (request.status == 200) {
-        data = parseWeatherData(request.responseText);
+        data = parseWeatherData(request.responseText, start_ymd, end_ymd);
     } else {
         alert(OpenLayers.i18n("Failure: ${msg} (status ${status})", {status: request.status, msg: request.responseText}));
     }
@@ -452,6 +463,7 @@ function getClimateData(station) {
     var station_data = localStorage[key];
     if (station_data) {
         station_data = JSON.parse(station_data); // meest onderscheidend vooraan
+        var count_missing_days = parseInt(end_ymd) - parseInt(start_ymd) + 1;
         if (station_data[start_ymd]) {
             // ok, al aanwezig
             var d = Date.parseDate(start_ymd, 'Ymd');
@@ -464,14 +476,15 @@ function getClimateData(station) {
                     
                     data.push(station_data[d_ymd]);
                 } else {
-                    break;
+                    //break;
                 }
+                count_missing_days -= 1;
                 d.setDate(d.getDate() + 1);
             }
             var today_ymd = new Date().clearTime().dateFormat('Ymd');
-            if (d.getTime() > last_d.getTime() || last_d.dateFormat('Ymd') == today_ymd) {
-                // alles al aanwezig
-                console.log('all climate data from local storage');
+            if (count_missing_days === 0 || (count_missing_days === 1 && last_d.dateFormat('Ymd') == today_ymd)) {
+                // alles al aanwezig (eventueel behalve vandaag)
+                console.log('all climate data from local storage', data);
                 return weatherDataToRecords(end_ymd, data);
             }
         }
@@ -2386,7 +2399,7 @@ function weatherStoreAsString() {
         weatherData[i].data.hour2 = 1500; // eis: hour1 < hour2
         weatherData[i].data.precipitation = 0;
         
-        lastDate = weatherData[i].data.date;
+        lastDate = new Date(weatherData[i].data.date); // clone!
         
         month = zpad(lastDate.getMonth() + 1, 2);
         day = zpad(lastDate.getDate(), 2);
@@ -2407,9 +2420,11 @@ function weatherStoreAsString() {
     }
     // EIS: elke dag data; ook data nodig voor model tijd + 6
     var modelDate = getModelDateTime();
-    while (modelDate > lastDate) {
+    while (modelDate.valueOf() > lastDate.valueOf()) {
         // voor elke dag gegevens toevoegen als laatste dataString
+        //lastDate = new Date(lastDate).setDate(lastDate.getDate() + 1);
         lastDate.setDate(lastDate.getDate() + 1);
+        
         month = zpad(lastDate.getMonth() + 1, 2);
         day = zpad(lastDate.getDate(), 2);
         weatherString += ',(' + month + ',' + day + ',' + lastDataValues + ')'; 
