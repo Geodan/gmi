@@ -55,7 +55,27 @@ if (typeof String.prototype.startsWith !== 'function') {
         <script>
 //<!--
 // settings
-Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Data', 'Gmi.Services.WPS');
+Ext.namespace('Gmi.Settings', 'Gmi.Session', 'Gmi.Services', 'Gmi.Data', 'Gmi.Params', 'Gmi.Services.WPS');
+
+// params in url
+Gmi.Params = Gmi.Params || {};
+if (location.search !== '') {
+  var search = location.search.substr(1); // remove ?
+  var params = search.split('&');
+  for (var i = 0; i < params.length; i++) {
+    if (params[i].indexOf('objectType=') === 0) {
+      Gmi.Params.objectType = params[i].substr(11);
+    }
+    if (params[i].indexOf('objectName=') === 0) {
+      // zie http://trac.openlayers.org/ticket/1704
+      Gmi.Params.objectName = decodeURIComponent(unescape(params[i].substr(11)));
+    }
+    
+    if (params[i].indexOf('debug=true') === 0) {
+      Gmi.Settings.debug = true;
+    }
+  }
+};
 
 Gmi.Version = '0.1';
 
@@ -616,6 +636,8 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
             decimalSeparator: Gmi.Settings.decimalSeparator,
+            minValue: 0,
+            maxValue: 50,
             maxLength: 4
         }),
         dataIndex: 'tmin'
@@ -625,6 +647,8 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
         editable: true,
         editor: new Ext.form.NumberField({  // rules about editing
             allowBlank: false,
+            minValue: 0,
+            maxValue: 50,
             decimalSeparator: Gmi.Settings.decimalSeparator,
             maxLength: 4
         }),
@@ -2315,6 +2339,7 @@ function showTerrein(map, terrein_id, layer_name) {
         }
         return;
     }
+    
     // voeg nieuwe terrein toe als WMS
     if (! layer_name) {
         layer_name = 'model_wildfire:terrein_' + terrein_id;
@@ -2523,7 +2548,11 @@ function startModelRun() {
         mimeType: 'application/json'
     };
     console.log('run params', run_params);
-    return;
+    if (Gmi.Settings.debug) {
+        if (! confirm(OpenLayers.i18n('Model parameters: \n\n${params}', {params: JSON.stringify(run_params, null, 2)}))) {
+            return;
+        }
+    }
         
     // startRun process aanroepen
     // Let op: 
