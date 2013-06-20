@@ -52,3 +52,7 @@ li .x-tree-node {
 .olImageLoadError {
     background-color: transparent;
 }
+
+.i18n {
+    /* dummy rule voor vertalingen */
+}
