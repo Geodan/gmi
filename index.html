@@ -1866,6 +1866,16 @@ Ext.onReady(function() {
             text: OpenLayers.i18n('Show translations'),
             handler: Gmi.Data.showTranslations
         });
+        tree_btns.push({
+            text: OpenLayers.i18n('Clear weather data'),
+            handler: function() {
+                if (confirm(OpenLayers.i18n('All weather data will be cleared. Are you sure?'))) {
+                    localStorage.clear();
+                    weatherStore.clearData();
+                    windStore.clearData();
+                }
+            }
+        });
     }
     
     // create the tree with the configuration from above
