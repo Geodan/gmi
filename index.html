@@ -209,9 +209,62 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Weather": 'Weer'
 });
 
+OpenLayers.Util.applyDefaults(OpenLayers.Lang['fr'], {
+    "Change zoom": "",
+    "Close": "",
+    "Cloudiness (%)": "",
+    "Create landscape file on the base of currently selected region": "",
+    "Custom data": "",
+    "Date": "",
+    "Date & time": "",
+    "Direction (&deg;)": "",
+    "Draw fire line": "",
+    "Draw new fire line": "",
+    "Edit": "",
+    "Edit the land use": "",
+    "Execution": "",
+    "Fire location": "",
+    "Is modified?": "",
+    "Layers": "",
+    "Measure distances in map": "",
+    "Modify existing fire line": "",
+    "Name": "",
+    "Name of fire": "",
+    "Name of terrain": "",
+    "Navigate in map": "",
+    "Restore next extent": "",
+    "Restore previous extent": "",
+    "Save": "",
+    "Saved terrains": "",
+    "Scale line": "",
+    "Select area": "",
+    "Select region": "",
+    "Select region by dragging a rectangle in the map": "",
+    "Set weather data": "",
+    "Simulation model": "",
+    "Speed (m/s)": "",
+    "Start run": "",
+    "Station": "",
+    "Step 1 - Location": "",
+    "Step 2 - Inputs": "",
+    "Step 3 - Run model": "",
+    "Terrain": "",
+    "Terrein ID": "",
+    "Time": "",
+    "Weather": "",
+    "Weather characteristics": "",
+    "Weather data": "",
+    "Weather settings": "",
+    "Weather station": "",
+    "Wildfire modeling": "",
+    "Wind": "",
+    "Wind characteristics": "",
+    "untitled": "sans titre"
+});
+
 Gmi.Data.translations = {};
 Gmi.Data.addTranslation = function(key) {
-    var value = OpenLayers.Lang['nl'][key];
+    var value = OpenLayers.Lang[OpenLayers.Lang.getCode()][key];
     if (! value) {
         value = '';
     }
@@ -233,14 +286,16 @@ Gmi.Data.showTranslations = function() {
         sorted.sort();
 
         var tempDict = {};
-        for(var i = 0; i < sorted.length; i++) {
+        for (var i = 0; i < sorted.length; i++) {
             tempDict[sorted[i]] = dict[sorted[i]];
         }
-
         return tempDict;
     }
 
-    alert(JSON.stringify(sortOnKeys(Gmi.Data.translations), null, 4));
+    var code = "OpenLayers.Util.applyDefaults(OpenLayers.Lang['" + OpenLayers.Lang.getCode() + "'], "
+      + JSON.stringify(sortOnKeys(Gmi.Data.translations), null, 4) + ");\n"
+      ;
+    alert(code);
 };
 
 function translateDom() {
@@ -1274,7 +1329,7 @@ Ext.onReady(function() {
             var wfsLayer = new OpenLayers.Layer.Vector("wfs_vector_landscapes", {
                 //rendererOptions: {
                 //    zIndexing: true
-                displayInLayerSwitcher: false,
+                displayInLayerSwitcher: Gmi.Settings.debug, // tonen bij debug
                 visibility: false, // NIET zichtbaar
                 styleMap: new OpenLayers.StyleMap({
                     'default': new OpenLayers.Style({
@@ -1428,7 +1483,7 @@ Ext.onReady(function() {
             
     // create a vector layer for drawing
     var wildfire_layer = new OpenLayers.Layer.Vector('Wildfire lines', {
-        displayInLayerSwitcher: false,
+        displayInLayerSwitcher: Gmi.Settings.debug, // tonen bij debug
         styleMap: new OpenLayers.StyleMap({
             temporary: OpenLayers.Util.applyDefaults({
                     pointRadius: 5,
@@ -1680,7 +1735,9 @@ Ext.onReady(function() {
                     }
                 }),
             wildfire_layer,
-            new OpenLayers.Layer.Boxes('_boxes_', {displayInLayerSwitcher: false})
+            new OpenLayers.Layer.Boxes('_boxes_', {
+                displayInLayerSwitcher: Gmi.Settings.debug // tonen bij debug
+            })
             /*,
             new OpenLayers.Layer.WMS("Tasmania Roads",
                 "http://demo.opengeo.org/geoserver/wms", {
@@ -2068,7 +2125,8 @@ Ext.onReady(function() {
                                 id: 'fuelmodel_name',
                                 name: 'fuelmodel_name',
                                 tooltip: OpenLayers.i18n('Name of terrain'),
-                                width: 100,
+                                anchor: '100%',
+                                width: 120,
                                 align: 'right',
                                 //allowBlank: false, // must be filled in!
                                 value: OpenLayers.i18n('untitled')
@@ -2266,7 +2324,7 @@ Ext.onReady(function() {
                                     name: 'fire_name',
                                     tooltip: OpenLayers.i18n('Name of fire'),
                                     anchor: '100%',
-                                    width: 100,
+                                    width: 120,
                                     align: 'right',
                                     //allowBlank: false, // must be filled in!
                                     value: OpenLayers.i18n('untitled')

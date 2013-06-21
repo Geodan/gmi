@@ -15,7 +15,8 @@ li .x-tree-node {
 }
 
 .g-actie-knop {
-    width: 100%
+    width: 100%;
+    padding-bottom: 4px;
 }
 
 /* volgende 2 zijn nodig voor modifyfeature in editing toolbar */
