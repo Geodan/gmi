@@ -46,7 +46,13 @@ if (typeof String.prototype.startsWith !== 'function') {
     String.prototype.startsWith = function (str){
         return this.slice(0, str.length) === str;
     };
-}
+};
+if (typeof Date.prototype.increment !== 'function') {
+    Date.prototype.increment = function(d) {
+        this.setTime( this.getTime() + d * 24 * 3600 * 1000 );
+        return this;
+    };
+};
         </script>
         <link rel="stylesheet" type="text/css" href="externals/GeoExt/resources/css/geoext-all.css" />
         <link rel="stylesheet" type="text/css" href="css/natuurbrandmodel.css" />
@@ -116,6 +122,7 @@ Gmi.Settings.dateFormat = 'Y-m-d';
 Gmi.Settings.datetimeFormat = 'Y-m-d H:i';
 Gmi.Settings.decimalSeparator = '.'; // werkt niet met ,
 Gmi.Settings.maxZoomOnMoveToTerrain = 14; // 14 = 1:34K
+Gmi.Settings.weatherDaysBefore = 6;
 
 Gmi.Session.userid = '0';
 
@@ -487,7 +494,22 @@ function parseWeatherData(data, start_ymd, end_ymd) {
             isModified: 0
         };
     }
-    var start_ymdi = parseInt(start_ymd);
+    var d = Date.parseDate(start_ymd, 'Ymd');
+    var end_d_valueOf = Date.parseDate(end_ymd, 'Ymd').valueOf();
+    var prev_d_ymd = d.dateFormat('Ymd');
+    d.increment(1); // 1ste dag overslaan
+    while (d.valueOf() <= end_d_valueOf) {
+        d_ymd = d.dateFormat('Ymd');
+        if (!dict[d_ymd] && dict[prev_d_ymd]) {
+            dict[d_ymd] = OpenLayers.Util.applyDefaults({date: Date.parseDate(d_ymd, 'Ymd'), isModified: 1}, dict[prev_d_ymd]);
+            console.log('stationgegevens kopie van dag ervoor', dict[d_ymd]);
+        }
+        
+        prev_d_ymd = d_ymd;
+        d.increment(1);
+    }
+    
+    /*var start_ymdi = parseInt(start_ymd);
     var end_ymdi = parseInt(end_ymd);
     for (var ymdi = start_ymdi + 1; ymdi <= end_ymdi; ymdi++) {
         var ymd = ymdi.toString();
@@ -495,7 +517,7 @@ function parseWeatherData(data, start_ymd, end_ymd) {
             dict[ymd] = OpenLayers.Util.applyDefaults({date: Date.parseDate(ymd, 'Ymd'), isModified: 1}, dict[(ymdi-1).toString()]);
             console.log('stationgegevens kopie van dag ervoor', dict[ymd]);
         }
-    }
+    }*/
     var records = [];
     for (var d_ymd in dict) {
         records.push(dict[d_ymd]);
@@ -583,11 +605,10 @@ function getClimateData(station) {
 
     //var today = Ext.util.Format.date(new Date(), 'Ymd');
     var end = Ext.getCmp('model_date').getValue();
-    //end.setDate(end.getDate() + 1); // ook morgen
     var end_ymd = end.dateFormat('Ymd');
     
     var start = new Date(end);
-    start.setDate(end.getDate() - 6);
+    start.increment( -Gmi.Settings.weatherDaysBefore );
     var start_ymd = start.dateFormat('Ymd');
     
     // al in sessie aanwezig?
@@ -622,7 +643,7 @@ function getClimateData(station) {
                     //break;
                 }
                 count_missing_days -= 1;
-                d.setDate(d.getDate() + 1);
+                d.increment( +1 );
             }
             if (count_modified_days_before_today === 0 && (count_missing_days === 0 || (count_missing_days === 1 && last_d.dateFormat('Ymd') == today_ymd))) {
                 // geen gewijzigde dagen voor vandaag bij bestaand station 
@@ -656,7 +677,7 @@ function getClimateData(station) {
                 windrichting: 0,
                 isModified: 1
             });
-            d.setDate(d.getDate() + 1);
+            d.increment( +1 );
         }
     } else {
         // request array of weather data
@@ -700,7 +721,7 @@ function getWindData(station) {
         cloudiness: 0
     }));
     var tomorrow = new Date(model_datetime);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.increment( +1 );
     records.push(new WindRecord({
         station: station,
         date: tomorrow,
@@ -1449,7 +1470,7 @@ Ext.onReady(function() {
 
             // tijd van neerslagradar
             var map = row.data.feature.layer.map;
-            var layers = map.getLayersByName('KNMI Neerslagradar');
+            var layers = map.getLayersByName(OpenLayers.i18n('KNMI Neerslagradar'));
             if (layers.length > 0) {
                 var time = new Date(datetime.getTime() - datetime.getTime() % (5*60*1000)); // round to 5 minutes
                 console.log('tijd afgerond voor neerslagradar', time);
@@ -1721,7 +1742,7 @@ Ext.onReady(function() {
                     maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),*/
-            new OpenLayers.Layer.WMS('KNMI Neerslagradar', 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?', {
+            new OpenLayers.Layer.WMS(OpenLayers.i18n('KNMI Neerslagradar'), 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?', {
                     layers: 'RADNL_OPER_R___25PCPRR_L3_COLOR',
                     transparent: true,
                     format: 'image/png'
@@ -1798,6 +1819,26 @@ Ext.onReady(function() {
             param: "LAYERS"
         }
     }*/];
+    
+    var tree_btns = [];
+    if (Gmi.Settings.debug) {
+        /*
+            contentEl: document.getElementById('show-btn'),
+            text: OpenLayers.i18n("Ignite"),
+            handler: function() {
+                not_implemented();
+                //treeConfigWin.show();
+                //Ext.getCmp("treeconfig").setValue(treeConfig);
+            }
+        }, * {
+            text: OpenLayers.i18n('Wfs Grid'),
+            handler: Gmi.defineTerrainWfsGrid
+        }*/
+        tree_btns.push({
+            text: OpenLayers.i18n('Show translations'),
+            handler: Gmi.Data.showTranslations
+        });
+    }
     
     // create the tree with the configuration from above
     tree = new Ext.tree.TreePanel({
@@ -1884,18 +1925,7 @@ Ext.onReady(function() {
         },
         rootVisible: false,
         lines: false,
-        bbar: [/*{
-            contentEl: document.getElementById('show-btn'),
-            text: OpenLayers.i18n("Ignite"),
-            handler: function() {
-                not_implemented();
-                //treeConfigWin.show();
-                //Ext.getCmp("treeconfig").setValue(treeConfig);
-            }
-        }, * {
-            text: OpenLayers.i18n('Wfs Grid'),
-            handler: Gmi.defineTerrainWfsGrid
-        }*/]
+        bbar: tree_btns
     });
     
     var modelPanel = new Ext.Panel({
@@ -2618,8 +2648,7 @@ function weatherStoreAsString() {
         var modelDate = getModelDateTime();
         while (modelDate.valueOf() > lastDate.valueOf()) {
             // voor elke dag gegevens toevoegen als laatste dataString
-            //lastDate = new Date(lastDate).setDate(lastDate.getDate() + 1);
-            lastDate.setDate(lastDate.getDate() + 1);
+            lastDate.increment( +1 );
 
             month = zpad(lastDate.getMonth() + 1, 2);
             day = zpad(lastDate.getDate(), 2);
