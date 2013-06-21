@@ -53,6 +53,9 @@ if (typeof Date.prototype.increment !== 'function') {
         return this;
     };
 };
+if (OpenLayers.Lang.getCode() !== 'en') {
+    jQuery.getScript('externals/ext-3.4.1/src/locale/ext-lang-' + OpenLayers.Lang.getCode() + '.js');
+};
         </script>
         <link rel="stylesheet" type="text/css" href="externals/GeoExt/resources/css/geoext-all.css" />
         <link rel="stylesheet" type="text/css" href="css/natuurbrandmodel.css" />
