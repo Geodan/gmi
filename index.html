@@ -2052,7 +2052,9 @@ Ext.onReady(function() {
                                     var map = mapPanel.map;
                                     if (b.pressed) {
                                         // start editen
-                                        start_edit_subset(map);
+                                        if (!start_edit_subset(map)) {
+                                            b.doToggle(); // niet gelukt, dus knop weer uitzetten
+                                        }
                                     } else {
                                         // stop editen
                                         stop_edit_subset(map);
@@ -2952,7 +2954,7 @@ function start_edit_subset(map) {
     var layers = map.getLayersByName('Terrein');
     if (layers.length !== 1) {
         alert(OpenLayers.i18n('No terrain selected'));
-        return;
+        return false;
     }
     var layer = layers[0];
     
@@ -3183,6 +3185,7 @@ function start_edit_subset(map) {
     
     //controls[0].layers.push(wfs_layer);
     //controls[0].activate();
+    return true;
 };
 
 function stop_edit_subset(map) {
