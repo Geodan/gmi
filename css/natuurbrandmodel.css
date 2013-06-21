@@ -56,3 +56,10 @@ li .x-tree-node {
 .i18n {
     /* dummy rule voor vertalingen */
 }
+
+.GmiControlSessionHistory {
+    float: right;
+    margin: 0 0 5px 5px;
+    height: 24px;
+    width: 24px;
+}
