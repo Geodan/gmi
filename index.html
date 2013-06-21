@@ -154,6 +154,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Edit feature": "Wijzig feature",
     "Edit the land use": "Wijzig landgebruik",
     "Execution": "Uitvoering",
+    "Export shape file": "Exporteer shapefile",
     "Feature Grid": "Grid",
     "Fire location": "Locatie van brand",
     "Fuel list": "Brandstoflijst",
@@ -187,11 +188,13 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Terrain": "Terrein",
     "Terrein ID": "Terrein ID",
     "Time": "Tijd",
+    "Warning": "Waarschuwing",
     "Weather": "Weer",
     "Weather characteristics": "Weergegevens",
     "Weather data": "Weer data",
     "Weather settings": "Weer instellingen",
     "Weather station": "Weerstation",
+    "Wild fire layer is missing": "Brandverspreidingslaag is nog niet berekend",
     "Wildfire modeling": "Simulatie van natuurbranden",
     "Wind": "Wind",
     "Wind characteristics": "Windgegevens",
@@ -1824,6 +1827,28 @@ Ext.onReady(function() {
     }*/];
     
     var tree_btns = [];
+    tree_btns.push({
+        text: OpenLayers.i18n('Download'),
+        handler: function() {
+            var layers = mapPanel.map.getLayersByName(OpenLayers.i18n('Brandverspreiding'));
+            if (layers.length == 0) {
+                Ext.MessageBox.show({
+                    msg: OpenLayers.i18n('Wild fire layer is missing'),
+                    width: 300,
+                    title: OpenLayers.i18n('Warning')
+                });
+            } else {
+                var url = '/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=' +
+                    layers[0].params['LAYERS'] + '&maxFeatures=1000&outputFormat=SHAPE-ZIP';
+
+                Ext.MessageBox.show({
+                    msg: '<a target="_blank" href="' + url + '">Klik here to download the shapefile</a>',
+                    width: 300,
+                    title: OpenLayers.i18n('Export shape file')
+                });
+            }
+        }
+    });
     if (Gmi.Settings.debug) {
         /*
             contentEl: document.getElementById('show-btn'),
