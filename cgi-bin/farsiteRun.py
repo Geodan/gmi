@@ -2,8 +2,8 @@
 print 'Content-type: text/plain\n'
 
 # Import modules for CGI handling
-import os,cgi, cgitb, daemon
-
+import os,cgi, cgitb
+#import daemon
 #import libs
 import time
 import sys
@@ -12,7 +12,7 @@ import psycopg2
 import os
 import subprocess
 import shutil
-
+import settings
 
 class farsiteRun():
 	def updateStatus(self,runid, status, percentage, lastmsg):
@@ -178,9 +178,9 @@ class farsiteRun():
 				return
 		
 		
-		pgserver_host = '192.168.40.5'
-		pgserver_port = '3389'
-		pgserver_user = 'modeluser'
+		pgserver_host = settings.pgserver_host #'192.168.40.5'
+		pgserver_port = settings.pgserver_post #'3389'
+		pgserver_user = settings.pgserver_user #'modeluser'
 		callstring = 'ogr2ogr -f "PostgreSQL" PG:"host='+pgserver_host+' port='+pgserver_port+' user=modeluser dbname=research password=modeluser" -nln result_'+str(runid)+' -lco schema=model_wildfire -lco OVERWRITE=YES '+str(outdir)+'/results.shp'
 		subprocess.call(callstring, shell=True)	
 		
@@ -210,7 +210,8 @@ class farsiteRun():
 	
 	def start(self):
 		#Set postgres connection
-		conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+		#conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+		conn_params = settings.conn_params
 		conn = psycopg2.connect(conn_params)
 		cur = conn.cursor()
 		self.conn = conn

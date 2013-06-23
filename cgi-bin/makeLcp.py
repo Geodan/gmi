@@ -2,7 +2,8 @@
 print 'Content-type: text/plain\n'
 
 # Import modules for CGI handling
-import os,cgi, cgitb, daemon
+import os,cgi, cgitb
+#import daemon
 #import libs
 import time
 import sys
@@ -10,6 +11,7 @@ import json
 import psycopg2
 import os
 import subprocess
+import settings
 #from apscheduler.scheduler import Scheduler
 
 #os.chdir("/var/www/wildfire/output")
@@ -182,7 +184,8 @@ class makeLcp():
 	
 	def start(self):
 		#Set postgres connection
-		conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+		#conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+		conn_params = settings.conn_params
 		self.conn = psycopg2.connect(conn_params)
 		self.cur = self.conn.cursor()
 		
@@ -205,11 +208,15 @@ class makeLcp():
 			print 'Starting main'
 			self.runid = self.result[0] 
 			#Define some params
-			self.gdal_translate_path = '/usr/local/bin/gdal_translate'
-			self.gdalwarp_path = '/usr/local/bin/gdalwarp'
-			self.lcpmake_path = '/var/www/wildfire/bin/lcpmake'
-			self.farsite_path = '/var/www/wildfire/bin/farsite4'
-			self.output_path  = '/var/data/wildfire/fuelmodels/' + str(self.runid)
+			#self.gdal_translate_path = '/usr/local/bin/gdal_translate'
+			#self.gdalwarp_path = '/usr/local/bin/gdalwarp'
+			#self.lcpmake_path = '/var/www/wildfire/bin/lcpmake'
+			#self.farsite_path = '/var/www/wildfire/bin/farsite4'
+			self.gdal_translate_path = settings.gdal_translate_path
+			self.gdalwarp_path = settings.gdalwarp_path
+			self.lcpmake_path = settings.lcpmake_path
+			self.farsite_path = settings.farsite_path
+			self.output_path  = settings.output_basepath + 'fuelmodels/' + str(self.runid)
 			if not os.path.exists(self.output_path):			
 				os.mkdir(self.output_path)
 			self.main()       
