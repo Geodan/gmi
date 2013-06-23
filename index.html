@@ -1738,7 +1738,7 @@ Ext.onReady(function() {
                 }
             ),*/
             new OpenLayers.Layer.OSM(),
-            /*new OpenLayers.Layer.WMS('Water', 'http://model.geodan.nl/geoserver/wms?', {
+            /*new OpenLayers.Layer.WMS('Water', '/geoserver/wms?', {
                     layers: 'nl_data:waterdeel_vlak',
                     format: 'image/png',
                     transparent: true
@@ -2626,7 +2626,7 @@ function showTerrein(map, terrein_id, layer_name) {
         });
     } else {
         var layer = new OpenLayers.Layer.WMS('Terrein', 
-        'http://model.geodan.nl/geoserver/wms?', {
+        '/geoserver/wms?', {
             layers: layer_name,
             transparent: true,
             format: 'image/png'
@@ -2858,7 +2858,7 @@ function startModelRun() {
             } else {
                 // voeg nieuwe resultaat toe
                 var layer = new OpenLayers.Layer.WMS('Brandverspreiding', 
-                'http://model.geodan.nl/geoserver/wms?', {
+                '/geoserver/wms?', {
                     layers: name,
                     transparent: true,
                     format: 'image/png'

@@ -109,8 +109,8 @@ class farsiteRun():
 		f = open(outdir + '/runSettings.txt', 'w')
 		f.write("""
 			version=42
-			adjustmentfile=/var/www/wildfire/input/Factor_1.ADJ
-			fuelmoisturefile=/var/www/wildfire/input/Low.FMS
+			adjustmentfile=/var/www/gmi/defaults/Factor_1.ADJ
+			fuelmoisturefile=/var/www/gmi/defaults/Low.FMS
 			fuelmodelfile=
 			weatherfile0=%(outdir)s/weather.WTH
 			windFile0=%(outdir)s/wind.WND
@@ -168,7 +168,7 @@ class farsiteRun():
 		#url = 'http://192.168.40.11/wildfire/cgi-bin/farsite_service'
 		#curlstring = 'curl -G -d "id='+str(runid)+'&coords=' + point + '&template='+template+'&weather='+ weatherString +'&wind=' + windString + '&day='+startDay+'&month='+startMonth+'&hour='+startHour+'&min=00&interval=1&duration=6" ' + url
 
-		callstring = '/var/www/wildfire/cgi-bin/farsite4 ' + outdir + '/runSettings.txt'
+		callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
 		self.updateStatus(runid, "running", 20,"Model draait")
 		with open(outdir + '/logfile', "w") as outfile:
 			try:
@@ -179,7 +179,7 @@ class farsiteRun():
 		
 		
 		pgserver_host = settings.pgserver_host #'192.168.40.5'
-		pgserver_port = settings.pgserver_post #'3389'
+		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
 		callstring = 'ogr2ogr -f "PostgreSQL" PG:"host='+pgserver_host+' port='+pgserver_port+' user=modeluser dbname=research password=modeluser" -nln result_'+str(runid)+' -lco schema=model_wildfire -lco OVERWRITE=YES '+str(outdir)+'/results.shp'
 		subprocess.call(callstring, shell=True)	
@@ -193,16 +193,16 @@ class farsiteRun():
 		#result = cur.fetchone()
 		self.updateStatus(runid, "running", 50, "Verwerken uitvoer")
 		#TODO: error checking
-		curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>result_'+str(runid)+'</name></featureType>" http://192.168.40.8:3389/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	
+		curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>result_'+str(runid)+'</name></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	
 		os.system(curlstring)
-		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><title>'+name+'</title></featureType>" 		http://192.168.40.8:3389/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
+		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><title>'+name+'</title></featureType>" 		http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
-		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>EPSG:28992</nativeCRS></featureType>" http://192.168.40.8:3389/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
+		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>EPSG:28992</nativeCRS></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
-		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><srs>EPSG:28992</srs></featureType>" http://192.168.40.8:3389/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
+		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><srs>EPSG:28992</srs></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
 		#Freakin bug, you have to add 'enabled': http://comments.gmane.org/gmane.comp.gis.geoserver.user/26753
-		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<layer><defaultStyle><name>isochrones</name></defaultStyle><enabled>true</enabled></layer>" http://192.168.40.8:3389/geoserver/rest/layers/model_wildfire:result_'+str(runid)
+		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<layer><defaultStyle><name>isochrones</name></defaultStyle><enabled>true</enabled></layer>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/layers/model_wildfire:result_'+str(runid)
 		os.system(curlstring)
 		
 		self.updateStatus(runid, "finished", 100, "Model klaar")
