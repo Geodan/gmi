@@ -136,6 +136,7 @@ OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
 OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "${perc}% completed": "Voortgang ${perc}%",
     "Area ${area}": "Oppervlakte ${area}",
+    "Area ${area} is too large; the maximum is ${max}": "Een oppervlakte van ${area} is te groot; maximaal ${max} is toegestaan.",
     "Change": "Wijzigen",
     "Change zoom": "Zoom wijzigen",
     "Close": "Sluiten",
@@ -177,6 +178,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Scale line": "Schaalbalk",
     "Select area": "Selecteer oppervlakte",
     "Select region": "Selecteer gebied",
+    "Select region first": "Selecteer eerst een gebied", 
     "Select region by dragging a rectangle in the map": "Selecteer gebied door het trekken van een rechthoek",
     "Set weather data": "Weergegevens",
     "Simulation model": "Simulatiemodel",
@@ -754,7 +756,7 @@ Gmi.makeSubset = function() {
         // rechthoek achterhalen
         //var bounds = layers[0].getDataExtent(); // gaat fout omdat deze functie marker.lonlat gebruikt en deze hier null
         var bounds = layers[0].markers.length > 0 ? layers[0].markers[0].bounds : null;
-        if (! bounds) {
+        if (!bounds || !bounds.left) {
             alert(OpenLayers.i18n('Select region first'));
         } else {
             // select region knop deactiveren
@@ -766,11 +768,7 @@ Gmi.makeSubset = function() {
             }
             Gmi.Session.box = bounds;
 
-            // makesubset process aanroepen
-            startProgress(OpenLayers.i18n('makesubset'));
-            Ext.Ajax.request({
-                url: '/geoserver/ows?', 
-                params: {
+            var run_params = {
                     service: 'WPS',
                     version: '1.1.0',
                     request: 'execute',
@@ -785,7 +783,18 @@ Gmi.makeSubset = function() {
                     }, ';'),
                     RawDataOutput: 'string',
                     mimeType: 'application/json'
-                },
+                };
+            if (Gmi.Settings.debug) {
+                if (! confirm(OpenLayers.i18n('Subset parameters: \n\n${params}', {params: JSON.stringify(run_params, null, 2)}))) {
+                    return;
+                }
+            }
+
+            // makesubset process aanroepen
+            startProgress(OpenLayers.i18n('makesubset'));
+            Ext.Ajax.request({
+                url: '/geoserver/ows?', 
+                params: run_params,
                 extraParams: {
                     count: 0
                 },
@@ -1622,7 +1631,7 @@ Ext.onReady(function() {
             //str += 'Total: ' + (evt.units === 'km' ? evt.measure.toFixed(3) : evt.measure.toFixed(1)) + ' ' + evt.units;// + '&nbsp;&nbsp;&nbsp;';
         }
 
-        if (!onlySum) {
+        if (!onlySum && idx > 2) {
             // bepaal ook lengte van laatste segment
             var geom = new OpenLayers.Geometry.LineString([
                 evt.geometry.components[idx - 2],
