@@ -188,6 +188,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Step 1 - Location": "Stap 1 - Locatie",
     "Step 2 - Inputs": "Stap 2 - Invoergegevens",
     "Step 3 - Run model": "Stap 3 - Model",
+    "Step 4 - Results": "Stap 4 - Resultaat",
     "Terrain": "Terrein",
     "Terrein ID": "Terrein ID",
     "Time": "Tijd",
@@ -734,6 +735,20 @@ function getWindData(station) {
         direction: avg_direction,
         cloudiness: 0
     }));
+    // extra uren
+    for (var i = 1; i <= 6; i++) {
+        var next = new Date(model_datetime);
+        next.increment(i/24);
+        records.push(new windRecord({
+            station: station,
+            date: next,
+            time: zpad(next.getHours(), 2) + ':00',
+            speed: avg_speed,
+            direction: avg_direction,
+            cloudiness: 0
+        }));
+    }
+    // volgende dag
     var tomorrow = new Date(model_datetime);
     tomorrow.increment( +1 );
     records.push(new windRecord({
@@ -1773,6 +1788,7 @@ Ext.onReady(function() {
                 }
             ),*/
             new OpenLayers.Layer.OSM(),
+            new OpenLayers.Layer(OpenLayers.i18n('Geen achtergrondlaag'), {isBaseLayer: true}),
             /*new OpenLayers.Layer.WMS('Water', '/geoserver/wms?', {
                     layers: 'nl_data:waterdeel_vlak',
                     format: 'image/png',
@@ -1863,28 +1879,6 @@ Ext.onReady(function() {
     }*/];
     
     var tree_btns = [];
-    tree_btns.push({
-        text: OpenLayers.i18n('Download'),
-        handler: function() {
-            var layers = mapPanel.map.getLayersByName(OpenLayers.i18n('Brandverspreiding'));
-            if (layers.length == 0) {
-                Ext.MessageBox.show({
-                    msg: OpenLayers.i18n('Wild fire layer is missing'),
-                    width: 300,
-                    title: OpenLayers.i18n('Warning')
-                });
-            } else {
-                var url = '/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=' +
-                    layers[0].params['LAYERS'] + '&maxFeatures=1000&outputFormat=SHAPE-ZIP';
-
-                Ext.MessageBox.show({
-                    msg: '<a target="_blank" href="' + url + '">Klik here to download the shapefile</a>',
-                    width: 300,
-                    title: OpenLayers.i18n('Export shape file')
-                });
-            }
-        }
-    });
     if (Gmi.Settings.debug) {
         /*
             contentEl: document.getElementById('show-btn'),
@@ -2450,16 +2444,48 @@ Ext.onReady(function() {
                             ]
                         }
                     ]
-                })/*,
+                }),
                 new Ext.form.FormPanel({
-                    title: 'Step 4 - Outputs',
+                    title: OpenLayers.i18n('Step 4 - Results'),
                     collapsible: true,
                     defaults: {
                         style: 'margin: 5px'
                     },
-                    html: '&lt;todo&gt;',
-                    cls: 'empty'
-                })*/]
+                    items: [
+                        {
+                            xtype: 'fieldset',
+                            title: OpenLayers.i18n('Output'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Download'),
+                                    handler: function() {
+                                        var layers = mapPanel.map.getLayersByName(OpenLayers.i18n('Brandverspreiding'));
+                                        if (layers.length == 0) {
+                                            Ext.MessageBox.show({
+                                                msg: OpenLayers.i18n('Wild fire layer is missing'),
+                                                width: 300,
+                                                title: OpenLayers.i18n('Warning')
+                                            });
+                                        } else {
+                                            var url = '/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=' +
+                                                layers[0].params['LAYERS'] + '&maxFeatures=1000&outputFormat=SHAPE-ZIP';
+
+                                            Ext.MessageBox.show({
+                                                msg: '<a target="_blank" href="' + url + '">Klik here to download the shapefile</a>',
+                                                width: 300,
+                                                title: OpenLayers.i18n('Export shape file')
+                                            });
+                                        }
+                                    },
+                                    cls: 'g-actie-knop'
+                                })
+                            ]
+                        }
+                    ]
+                })]
             });
     var viewportItems = [mapPanel, tree, modelPanel];
     
