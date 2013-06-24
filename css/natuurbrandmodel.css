@@ -6,8 +6,15 @@
         Purpose of the stylesheet follows.
 */
 
+
+.g-legendgraphic {
+    border-left: 2px solid #bbb;
+    margin-left: 0.5em;
+    padding-left: 2px;
+    overflow: hidden;
+}
 .g-legendgraphic img {
-    float: right;
+    /*float: right;*/
 }
 
 li .x-tree-node {
