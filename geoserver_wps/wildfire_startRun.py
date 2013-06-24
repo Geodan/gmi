@@ -57,5 +57,5 @@ def run(userid,geom, name, fuelmodel, weatherstring, windstring, startmonth, sta
 	percentage_out = 0
 	
 	import subprocess
-	p = subprocess.Popen(['/usr/bin/curl','-u','demo:demo', 'http://model.geodan.nl/wildfire/cgi-bin/farsiteRun.py'])
+	p = subprocess.Popen(['/usr/bin/curl','-u','demo:demo', 'http://model.geodan.nl/main/gmi/cgi-bin/farsiteRun.py'])
 	return '{"runid":%i,"status":"%s", "percentage":%i}' % (runid_out,status_out, percentage_out)

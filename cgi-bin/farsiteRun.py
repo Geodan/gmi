@@ -109,8 +109,8 @@ class farsiteRun():
 		f = open(outdir + '/runSettings.txt', 'w')
 		f.write("""
 			version=42
-			adjustmentfile=/var/www/gmi/defaults/Factor_1.ADJ
-			fuelmoisturefile=/var/www/gmi/defaults/Low.FMS
+			adjustmentfile=%(defaultsdir)sFactor_1.ADJ
+			fuelmoisturefile=%(defaultsdir)sLow.FMS
 			fuelmodelfile=
 			weatherfile0=%(outdir)s/weather.WTH
 			windFile0=%(outdir)s/wind.WND
@@ -159,7 +159,7 @@ class farsiteRun():
 			rast_crownFire = false
 			rast_fireDirection = false
 			rast_reactionIntensity = false
-			""" % {'outdir': outdir,'vcttype': vcttype,'startMonth':startMonth,'startDay':startDay,'startHour':startHour,'startMin':startMin,'endMonth':endMonth,'endDay':endDay,'endHour':endHour,'endMin':endMin})
+			""" % {'defaultsdir': settings.defaults_path,'outdir': outdir,'vcttype': vcttype,'startMonth':startMonth,'startDay':startDay,'startHour':startHour,'startMin':startMin,'endMonth':endMonth,'endDay':endDay,'endHour':endHour,'endMin':endMin})
 		f.close()
 		
 		###############################################

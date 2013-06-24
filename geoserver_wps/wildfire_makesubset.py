@@ -60,7 +60,7 @@ def run(userid, name, upper, lower, left, right):
 	
 	import subprocess
 	#p = subprocess.Popen(['/usr/bin/python','/var/www/wildfire/python/makeSubset.py'])
-	p = subprocess.Popen(['/usr/bin/curl','-u', 'demo:demo','http://model.geodan.nl/wildfire/cgi-bin/makeSubset.py'])
+	p = subprocess.Popen(['/usr/bin/curl','-u', 'demo:demo','http://model.geodan.nl/main/gmi/cgi-bin/makeSubset.py'])
 	p.daemon = True
 
 	return '{"runid":'+str(runid)+',"status":"scheduled","percentage":0}'
