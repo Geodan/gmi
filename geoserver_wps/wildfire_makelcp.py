@@ -46,7 +46,7 @@ def run(userid, terreinid, landscapename):
 	
 	
 	import subprocess
-	p = subprocess.Popen(['/usr/bin/curl','-u', 'demo:demo','http://model.geodan.nl/wildfire/cgi-bin/makeLcp.py'])
+	p = subprocess.Popen(['/usr/bin/curl','-u', 'demo:demo','http://model.geodan.nl/main/gmi/cgi-bin/makeLcp.py'])
 	p.daemon = True
 	
 	return '{"runid":'+str(runid)+',"status":"scheduled","percentage":0}' 
