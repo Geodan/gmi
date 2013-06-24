@@ -2000,23 +2000,6 @@ Ext.onReady(function() {
         rootVisible: false,
         lines: false,
         bbar: tree_btns,
-        bbarx: [{
-    items: [
-      'First Toolbar',
-      {xtype: 'button', text: 'Button 1a', handler: not_implemented},
-      {text: 'Button 1b', handler: not_implemented}
-    ]
-  }, {
-    items: [
-      'Second Toolbar',
-      {text: 'Button 2', handler: not_implemented}
-    ]
-  }, {
-    items: [
-      'Thrid Toolbar',
-      {text: 'Button 3', handler: not_implemented}
-    ]
-  }],
         bbarCfg: {
             //cls: 'x-panel-bbar',  // Default class not applied if Custom element specified
             //html: 'Message'
@@ -2624,6 +2607,9 @@ Ext.onReady(function() {
     };
     var runner = new Ext.util.TaskRunner();
     runner.start(task);
+        
+    // navigatie knop aanzetten. (evt. op te vragen via displayClass 'olControlEditingToolbar'
+    toolbar.activateControl(toolbar.controls[0]);
 });
 
 function zpad(i, width) {
