@@ -326,7 +326,7 @@ function translateDom() {
             }
         }
     }
-}
+};
 
 // data
 
@@ -606,7 +606,7 @@ function weatherDataToRecords(end_ymd, objs) {
         records.push(new WeatherRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'Ymd'), isModified: 1}, last_obj), end_ymd));
     }
     return records;
-}
+};
 
 function getClimateData(station) {
 
@@ -1781,7 +1781,7 @@ Ext.onReady(function() {
                     transitionEffect: 'resize',
                     legend: {
                         //url: "http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?SERVICE=WMS&&version=1.1.1&service=WMS&request=GetLegendGraphic&layer=RADNL_OPER_R___25PCPRR_L3_COLOR&format=image/png&STYLE=default&WIDTH=100"
-                        url: '/img/NeerslagradarLegend.png'
+                        url: 'img/NeerslagradarLegend.png'
                     }
                 }),
             wildfire_layer,
@@ -2683,7 +2683,7 @@ function showTerrein(map, terrein_id, layer_name) {
             opacity: 0.6,
             legend: {
                 //url: "/geoserver/wms?SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=" + layer_name
-                url: '/img/TerrainLegend.png'
+                url: 'img/TerrainLegend.png'
             }
         });
         map.addLayer(layer);
