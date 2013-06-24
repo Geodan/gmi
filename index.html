@@ -1799,6 +1799,16 @@ Ext.onReady(function() {
                     maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),*/
+            new OpenLayers.Layer.WMS('Topo', '/geoserver/wms?', {
+                    layers: 'nl_data:terrein',
+                    format: 'image/png',
+                    transparent: true
+                }, {
+                    isBaseLayer: false,
+                    visibility: false,
+                    maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
+                    transitionEffect: 'resize'
+                }),
             new OpenLayers.Layer.WMS(OpenLayers.i18n('KNMI Neerslagradar'), 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?', {
                     layers: 'RADNL_OPER_R___25PCPRR_L3_COLOR',
                     transparent: true,
@@ -1994,6 +2004,23 @@ Ext.onReady(function() {
         rootVisible: false,
         lines: false,
         bbar: tree_btns,
+        bbarx: [{
+    items: [
+      'First Toolbar',
+      {xtype: 'button', text: 'Button 1a', handler: not_implemented},
+      {text: 'Button 1b', handler: not_implemented}
+    ]
+  }, {
+    items: [
+      'Second Toolbar',
+      {text: 'Button 2', handler: not_implemented}
+    ]
+  }, {
+    items: [
+      'Thrid Toolbar',
+      {text: 'Button 3', handler: not_implemented}
+    ]
+  }],
         bbarCfg: {
             //cls: 'x-panel-bbar',  // Default class not applied if Custom element specified
             //html: 'Message'
@@ -2633,9 +2660,6 @@ Ext.onReady(function() {
     };
     var runner = new Ext.util.TaskRunner();
     runner.start(task);
-        
-    // navigatie knop aanzetten. (evt. op te vragen via displayClass 'olControlEditingToolbar'
-    toolbar.activateControl(toolbar.controls[0]);
 });
 
 function zpad(i, width) {
