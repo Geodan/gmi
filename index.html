@@ -278,9 +278,13 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['fr'], {
 
 Gmi.Data.translations = {};
 Gmi.Data.addTranslation = function(key) {
-    var value = OpenLayers.Lang[OpenLayers.Lang.getCode()][key];
-    if (! value) {
-        value = '';
+    var locale = OpenLayers.Lang.getCode();
+    var value = '';
+    if (OpenLayers.Lang[locale]) {
+        var value = OpenLayers.Lang[OpenLayers.Lang.getCode()][key];
+        if (! value) {
+            value = '';
+        }
     }
     Gmi.Data.translations[key] = value;
 };
