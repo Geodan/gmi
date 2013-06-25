@@ -171,12 +171,7 @@ class farsiteRun():
 		callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
 		killstring = "sleep 10 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
 		
-		#with open(outdir + '/logfile', "w") as outfile:
-		#	try:
-		#		subprocess.call(callstring, stdout=outfile, shell=True)
-		#	except:
-		#		self.updateStatus(runid, "error", 20, "Fout in model")
-		#		return
+		
 		try:
 			subprocess.Popen(killstring, shell=True) #This will kill all farsite processes within x seconds
 			output = subprocess.check_output(settings.farsite_path + ' '+outdir+'/runSettings.txt',shell=True)

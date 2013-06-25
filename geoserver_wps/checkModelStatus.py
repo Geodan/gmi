@@ -39,4 +39,4 @@ def run(runid):
 	lastupdate = result[4]
 	owner = result[5]
 	
-	return '{"runid":%i,"status":"%s", "percentage":%i,"modelname":"%s", "lastmessage":"%s", "lastupdate":"%s","owner":"%s"}' % (runid,status, percentage, modelname, lastmsg, lastupdate, owner)
+	return '{"runid":%i,"status":"%s", "percentage":%i,"modelname":"%s", "lastmessage":"%s", "lastupdate":"%s","owner":"%s"}' % (runid,status, percentage, modelname, lastmsg.replace("\n", "\\n"), lastupdate, owner)
