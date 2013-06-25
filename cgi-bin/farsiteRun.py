@@ -12,7 +12,7 @@ import psycopg2
 import os
 import subprocess
 import shutil
-import settings
+import settings 
 
 class farsiteRun():
 	def updateStatus(self,runid, status, percentage, lastmsg):
@@ -35,7 +35,7 @@ class farsiteRun():
 		outdir = '/var/data/wildfire/fires/%s' % runid
 		if not os.path.exists(outdir):
 			os.makedirs(outdir)
-		os.chdir(outdir)
+		os.chdir(outdir) #Go into output directory
 		query = "SELECT point, weatherstring, windstring, startmonth, startday, starthour, fuelmodel, name FROM administration.params_farsiterun WHERE run = %s;"
 		data = (runid, )
 		cur.execute(query, data )
@@ -169,14 +169,27 @@ class farsiteRun():
 		#curlstring = 'curl -G -d "id='+str(runid)+'&coords=' + point + '&template='+template+'&weather='+ weatherString +'&wind=' + windString + '&day='+startDay+'&month='+startMonth+'&hour='+startHour+'&min=00&interval=1&duration=6" ' + url
 
 		callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
-		self.updateStatus(runid, "running", 20,"Model draait")
-		with open(outdir + '/logfile', "w") as outfile:
-			try:
-				subprocess.call(callstring, stdout=outfile, shell=True)
-			except:
-				self.updateStatus(runid, "error", 20, "Fout in model")
-				return
+		killstring = "sleep 10 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
 		
+		#with open(outdir + '/logfile', "w") as outfile:
+		#	try:
+		#		subprocess.call(callstring, stdout=outfile, shell=True)
+		#	except:
+		#		self.updateStatus(runid, "error", 20, "Fout in model")
+		#		return
+		try:
+			subprocess.Popen(killstring, shell=True) #This will kill all farsite processes within x seconds
+			output = subprocess.check_output(settings.farsite_path + ' '+outdir+'/runSettings.txt',shell=True)
+			if (output): #Any output is an error
+				error = (output[:150] + '..')
+				self.updateStatus(runid, "error", 20, "Error in farsite: " + error)
+				return
+		except subprocess.CalledProcessError, e:
+			self.updateStatus(runid, "error", 20, e.output)
+			return
+		except:
+			self.updateStatus(runid, "error", 20, "Error in farsite")
+			return
 		
 		pgserver_host = settings.pgserver_host #'192.168.40.5'
 		pgserver_port = settings.pgserver_port #'3389'
