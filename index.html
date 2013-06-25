@@ -130,6 +130,7 @@ Gmi.Settings.datetimeFormat = 'Y-m-d H:i';
 Gmi.Settings.decimalSeparator = '.'; // werkt niet met ,
 Gmi.Settings.maxZoomOnMoveToTerrain = 14; // 14 = 1:34K
 Gmi.Settings.weatherDaysBefore = 6;
+Gmi.Settings.weatherDefaults = {tmin: 15, tmax: 30, hmin: 50, hmax: 100, precipitation: 0, speed: 3.3, direction: 225, cloudiness: 0};
 Gmi.Settings.windHours = 6;
 
 Gmi.Session.userid = '0';
@@ -639,6 +640,28 @@ function weatherDataToRecords(end_ymd, objs) {
     return records;
 };
 
+function windDataToRecords(end_ymd, objs) {
+
+    var records = [];
+
+    var last_ymd = '000000000000';
+    var last_obj = {};
+    for (var i = 0; i < objs.length; i++) {
+        var obj = objs[i];
+        var d_ymd = obj.date.dateFormat('YmdHi');
+        if (d_ymd > last_ymd) {
+            last_ymd = d_ymd;
+            last_obj = obj;
+        }
+        records.push(new WindRecord(obj, d_ymd));
+    }
+    if (records.length > 0 && end_ymd !== last_ymd) {
+        // voeg laatste record toe met zelfde gegevens behalve datum
+        records.push(new WindRecord(OpenLayers.Util.applyDefaults({date: Date.parseDate(end_ymd, 'YmdHi'), isModified: 1}, last_obj), end_ymd));
+    }
+    return records;
+};
+
 function getClimateData(station) {
 
     //var today = Ext.util.Format.date(new Date(), 'Ymd');
@@ -704,13 +727,13 @@ function getClimateData(station) {
             data.push({
                 station: station,
                 date: Date.parseDate(d_ymd, 'Ymd'), // convert yyyymmdd to date?
-                tmin: 0,
+                tmin: Gmi.Settings.weatherDefaults.tmin,
                 hour1: 5,
-                tmax: 0,
+                tmax: Gmi.Settings.weatherDefaults.tmax,
                 hour2: 14,
-                hmin: 50,
-                hmax: 100,
-                precipitation: 0,
+                hmin: Gmi.Settings.weatherDefaults.hmin,
+                hmax: Gmi.Settings.weatherDefaults.hmax,
+                precipitation: Gmi.Settings.weatherDefaults.precipitation,
                 wind: 0,
                 windrichting: 0,
                 isModified: 1
@@ -746,45 +769,50 @@ function getWindData(station) {
     // wind uit laatste dag van climate data als initiele waarde
     // of (voorlopig) gewoon gemiddelde waarde
     
-    var avg_direction = 225; //Zuid-west ipv190;
-    var avg_speed = 3.3;
+    var start = new Date(model_datetime);
+    start.setMinutes(0); start.setSeconds(0); start.setMilliseconds(0);
+    var start_ymd = start.dateFormat('YmdHi');
 
+    var end = new Date(start);
+    end.increment(Gmi.Settings.windHours/24);
+    var end_ymd = end.dateFormat('YmdHi');
+    
     // read from local storage
     var data = [];
     var key = station + '_wind';
     var station_data = localStorage[key];
     if (station_data) {
         station_data = JSON.parse(station_data); // meest onderscheidend vooraan
-        var count_missing_days = parseInt(end_ymd) - parseInt(start_ymd) + 1;
-        var count_modified_days_before_today = 0;
+        var count_missing_hours = Gmi.Settings.windHours + 1;
+        //var count_modified_days_before_today = 0;
         var today = new Date().clearTime();
         var today_ymd = today.dateFormat('Ymd');
         if (station_data[start_ymd]) {
             // ok, al aanwezig
-            var d = Date.parseDate(start_ymd, 'Ymd');
-            var last_d = Date.parseDate(end_ymd, 'Ymd');
+            var d = Date.parseDate(start_ymd, 'YmdHi');
+            var last_d = Date.parseDate(end_ymd, 'YmdHi');
             while (d.getTime() <= last_d.getTime()) {
-                var d_ymd = d.dateFormat('Ymd');
+                var d_ymd = d.dateFormat('YmdHi');
                 if (station_data[d_ymd]) {
                     // date omzetten van string naar object
                     station_data[d_ymd]['date'] = new Date(station_data[d_ymd]['date']);
                     
                     data.push(station_data[d_ymd]);
                     
-                    if (station > 0 && station_data[d_ymd]['date'].valueOf() < today.valueOf() && station_data[d_ymd]['isModified'] === 1) {
-                        count_modified_days_before_today += 1;
-                    }
+                    //if (station > 0 && station_data[d_ymd]['date'].valueOf() < today.valueOf() && station_data[d_ymd]['isModified'] === 1) {
+                    //    count_modified_days_before_today += 1;
+                    //}
                 } else {
                     //break;
                 }
-                count_missing_days -= 1;
-                d.increment( +1 );
+                count_missing_hours -= 1;
+                d.increment( +1/24 );
             }
             if (count_modified_days_before_today === 0 && (count_missing_days === 0 || (count_missing_days === 1 && last_d.dateFormat('Ymd') == today_ymd))) {
                 // geen gewijzigde dagen voor vandaag bij bestaand station 
                 // EN (geen ontbrekende dagen OF alleen vandaag ontbreekt)
-                console.log('all climate data from local storage', data);
-                return weatherDataToRecords(end_ymd, data);
+                console.log('all wind data from local storage', data);
+                return windDataToRecords(end_ymd, data);
             }
         }
     }
@@ -793,26 +821,26 @@ function getWindData(station) {
     var windRecord = windStore.recordType; // ipv direct
     records.push(new windRecord({
         station: station,
-        date: model_datetime,
-        time: zpad(model_datetime.getHours(), 2) + ':00',
-        speed: avg_speed,
-        direction: avg_direction,
-        cloudiness: 0
+        date: start,
+        time: zpad(start.getHours(), 2) + ':00',
+        speed: Gmi.Settings.weatherDefaults.speed,
+        direction: Gmi.Settings.weatherDefaults.direction,
+        cloudiness: Gmi.Settings.weatherDefaults.cloudiness
     }));
     // extra uren
     for (var i = 1; i <= Gmi.Settings.windHours; i++) {
-        var next = new Date(model_datetime);
+        var next = new Date(start);
         next.increment(i/24);
         records.push(new windRecord({
             station: station,
             date: next,
             time: zpad(next.getHours(), 2) + ':00',
-            speed: avg_speed,
-            direction: avg_direction,
-            cloudiness: 0
+            speed: Gmi.Settings.weatherDefaults.speed,
+            direction: Gmi.Settings.weatherDefaults.direction,
+            cloudiness: Gmi.Settings.weatherDefaults.cloudiness
         }));
     }
-    // volgende dag
+    /* volgende dag
     var tomorrow = new Date(model_datetime);
     tomorrow.increment( +1 );
     records.push(new windRecord({
@@ -822,7 +850,7 @@ function getWindData(station) {
         speed: avg_speed,
         direction: avg_direction,
         cloudiness: 0
-    }));
+    }));*/
     return records;
 };
 
@@ -2846,7 +2874,7 @@ function weatherStoreAsString() {
         hhi = zpad(Math.min(99, weatherData[i].data.hmax), 2); // max 99 voor farsite
         hlo = zpad(Math.min(99, weatherData[i].data.hmin), 2); // max 99 voor farsite
         elv = '0000';
-        var lastDataValues = rn + ',' 
+        lastDataValues = rn + ',' 
             + am + ',' + pm +',' + tlo +',' + thi +',' + hhi +',' + hlo +',' + elv;
         weatherString += '(' + month + ',' + day  + ',' + lastDataValues +')';
         if (i < weatherData.length - 1) { 
@@ -2878,7 +2906,13 @@ function windStoreAsString() {
     });
 
     var windString = '';
-    var month, day, hour, speed, dir, cl, hhmm;
+    var month, day, speed, dir, cl, hhmm;
+    var last_date = null;
+    if (windData.length > 0) {
+        last_date = new Date(windData[0].data.date);
+        last_date.increment(+1);
+    }
+    var lastDataValues;
     for (var i = 0; i < windData.length; i++) {
         month = windData[i].data.date.getMonth() + 1;
         day = windData[i].data.date.getDate();
@@ -2890,10 +2924,15 @@ function windStoreAsString() {
         speed = zpad(windData[i].data.speed * 3.6, 2); // van m/s naar km/h
         dir = zpad(windData[i].data.direction, 3);
         cl = zpad(Math.min(99, windData[i].data.cloudiness), 2);
-        windString += '(' + month + ',' + day  + ',' + hhmm + ',' + speed + ',' + dir + ',' + cl +')';
+        lastDataValues = speed + ',' + dir + ',' + cl;
+        //windString += '(' + month + ',' + day + ',' + hhmm + ',' + lastDataValues +')';
+        windString += '(' + windData[i].data.date.dateFormat('m,d,Hi') + ',' + lastDataValues + ')';
         if (i < windData.length - 1) {
             windString += ',';
         }
+    }
+    if (last_date) {
+        windString += ',(' + last_date.dateFormat('m,d,Hi') + ',' + lastDataValues + ')';
     }
     console.log('windString', windString);
     return windString;
@@ -3017,7 +3056,6 @@ function startModelRun() {
     // startRun process aanroepen
     // Let op: 
     startProgress(OpenLayers.i18n('startRun'));
-    var fire_name = Ext.getCmp('fire_name').getValue();
     Ext.Ajax.request({
         url: '/geoserver/ows?', 
         params: run_params,
@@ -3348,7 +3386,7 @@ function start_edit_subset(map) {
             popup.close();
         }
         control.unselectAll();
-        alert(OpenLayers.i18n('save succeeded'));
+        //alert(OpenLayers.i18n('save succeeded'));
     });
 
     function createPopup(feature) {
