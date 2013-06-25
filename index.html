@@ -1888,7 +1888,8 @@ Ext.onReady(function() {
             new OpenLayers.Layer.WMS('Topo', '/geoserver/wms?', {
                     layers: 'nl_data:terrein',
                     format: 'image/png',
-                    transparent: true
+                    transparent: true,
+                    tiled:true
                 }, {
                     isBaseLayer: false,
                     visibility: false,
