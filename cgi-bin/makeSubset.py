@@ -77,7 +77,7 @@ ALTER TABLE model_wildfire.terrein_%s ADD PRIMARY KEY (gid);
 	#TODO: error checking
 	curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>terrein_'+str(runid)+'</name></featureType>" http://' + gs_host + ':'+ gs_port + '/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	
 	os.system(curlstring)
-	curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>epsg:900913</nativeCRS></featureType>" http://'+gs_host+':'+gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/terrein_'+str(runid)
+	curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>epsg:900913</nativeCRS><enabled>true</enabled></featureType>" http://'+gs_host+':'+gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/terrein_'+str(runid)
 	os.system(curlstring)
 	#Freakin bug, you have to add 'enabled': http://comments.gmane.org/gmane.comp.gis.geoserver.user/26753
 	curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<layer><defaultStyle><name>top10nl_terrein</name></defaultStyle><enabled>true</enabled></layer>" http://'+gs_host+':'+gs_port+'/geoserver/rest/layers/model_wildfire:terrein_'+str(runid)
