@@ -117,7 +117,11 @@ Gmi.Control.SessionHistory = OpenLayers.Class(OpenLayers.Control.NavigationHisto
 Gmi.Version = '0.1';
 
 Gmi.Settings.openLayers_imgPath = 'img/';
-Gmi.Settings.openLayers_proxyHost = 'proxy.php?url=';
+if (location.host === 'brand.localhost') {
+    Gmi.Settings.openLayers_proxyHost = 'proxy.php?url=';
+} else {
+    Gmi.Settings.openLayers_proxyHost = '/cgi-bin/proxy.cgi?url=';
+}
 Gmi.Settings.maxArea = 10000 * 10000; // m2; 10 bij 10 km, 100 km2
 Gmi.Settings.tijd_afronding_minuten = 5;
 Gmi.Settings.operationalMode = 1;
@@ -126,6 +130,7 @@ Gmi.Settings.datetimeFormat = 'Y-m-d H:i';
 Gmi.Settings.decimalSeparator = '.'; // werkt niet met ,
 Gmi.Settings.maxZoomOnMoveToTerrain = 14; // 14 = 1:34K
 Gmi.Settings.weatherDaysBefore = 6;
+Gmi.Settings.windHours = 6;
 
 Gmi.Session.userid = '0';
 
@@ -139,6 +144,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Area ${area} is too large; the maximum is ${max}": "Een oppervlakte van ${area} is te groot; maximaal ${max} is toegestaan.",
     "Change": "Wijzigen",
     "Change zoom": "Zoom wijzigen",
+    "Click here to download the shapefile": "Klik hier om een shapefile te downloaden",
     "Close": "Sluiten",
     "Cloudiness (%)": "Bewolking (%)",
     "Create landscape file on the base of currently selected region": "Bepaal hoeveelheid brandstof op basis van huidige gebied",
@@ -198,6 +204,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Weather data": "Weer data",
     "Weather settings": "Weer instellingen",
     "Weather station": "Weerstation",
+    "WFS process error: ${msg}": "Fout bij uitvoering model: ${msg}",
     "Wild fire layer is missing": "Brandverspreidingslaag is nog niet berekend",
     "Wildfire modeling": "Simulatie van natuurbranden",
     "Wind": "Wind",
@@ -284,7 +291,7 @@ Gmi.Data.addTranslation = function(key) {
     var locale = OpenLayers.Lang.getCode();
     var value = '';
     if (OpenLayers.Lang[locale]) {
-        var value = OpenLayers.Lang[OpenLayers.Lang.getCode()][key];
+        value = OpenLayers.Lang[locale][key];
         if (! value) {
             value = '';
         }
@@ -465,7 +472,8 @@ var WindRecord = new Ext.data.Record.create([
     { name: 'time', type: 'time', timeFormat: 'H:i'}, // hhmm
     { name: 'speed', type: 'float'}, // km/h farsite, km/s gebruiker
     { name: 'direction', type: 'float'}, // degrees
-    { name: 'cloudiness', type: 'float'} // percentage
+    { name: 'cloudiness', type: 'float'}, // percentage
+    { name: 'isModified', type: 'int'}
 ]);
 
 var TerrainFeatureRecord = new GeoExt.data.FeatureRecord.create([
@@ -580,6 +588,22 @@ function requestWeatherData(station, start_ymd, end_ymd) {
 
 function storeWeatherData(station, data) {
     var key = station + '_station';
+    var value = localStorage[key];
+    if (value) {
+        value = JSON.parse(value); // meest onderscheidend vooraan
+    } else {
+        value = {};
+    }
+    for (var i = 0; i < data.length; i++) {
+        // element van data array opslaan in dict met yyyymmdd als key
+        value[data[i].date.dateFormat('Ymd')] = data[i];
+    }
+    localStorage[key] = JSON.stringify(value);
+};
+
+function storeWindData(station, data) {
+    //console.log('todo: save winddata', dataset);
+    var key = station + '_wind';
     var value = localStorage[key];
     if (value) {
         value = JSON.parse(value); // meest onderscheidend vooraan
@@ -724,7 +748,47 @@ function getWindData(station) {
     
     var avg_direction = 225; //Zuid-west ipv190;
     var avg_speed = 3.3;
-    
+
+    // read from local storage
+    var data = [];
+    var key = station + '_wind';
+    var station_data = localStorage[key];
+    if (station_data) {
+        station_data = JSON.parse(station_data); // meest onderscheidend vooraan
+        var count_missing_days = parseInt(end_ymd) - parseInt(start_ymd) + 1;
+        var count_modified_days_before_today = 0;
+        var today = new Date().clearTime();
+        var today_ymd = today.dateFormat('Ymd');
+        if (station_data[start_ymd]) {
+            // ok, al aanwezig
+            var d = Date.parseDate(start_ymd, 'Ymd');
+            var last_d = Date.parseDate(end_ymd, 'Ymd');
+            while (d.getTime() <= last_d.getTime()) {
+                var d_ymd = d.dateFormat('Ymd');
+                if (station_data[d_ymd]) {
+                    // date omzetten van string naar object
+                    station_data[d_ymd]['date'] = new Date(station_data[d_ymd]['date']);
+                    
+                    data.push(station_data[d_ymd]);
+                    
+                    if (station > 0 && station_data[d_ymd]['date'].valueOf() < today.valueOf() && station_data[d_ymd]['isModified'] === 1) {
+                        count_modified_days_before_today += 1;
+                    }
+                } else {
+                    //break;
+                }
+                count_missing_days -= 1;
+                d.increment( +1 );
+            }
+            if (count_modified_days_before_today === 0 && (count_missing_days === 0 || (count_missing_days === 1 && last_d.dateFormat('Ymd') == today_ymd))) {
+                // geen gewijzigde dagen voor vandaag bij bestaand station 
+                // EN (geen ontbrekende dagen OF alleen vandaag ontbreekt)
+                console.log('all climate data from local storage', data);
+                return weatherDataToRecords(end_ymd, data);
+            }
+        }
+    }
+        
     var records = [];
     var windRecord = windStore.recordType; // ipv direct
     records.push(new windRecord({
@@ -736,7 +800,7 @@ function getWindData(station) {
         cloudiness: 0
     }));
     // extra uren
-    for (var i = 1; i <= 6; i++) {
+    for (var i = 1; i <= Gmi.Settings.windHours; i++) {
         var next = new Date(model_datetime);
         next.increment(i/24);
         records.push(new windRecord({
@@ -989,11 +1053,11 @@ var windColumnModel = new Ext.grid.ColumnModel({
         dataIndex: 'time',
         format: 'H:i',
         align: 'right',
-        editable: true, forceSelection: true,
-        editor: new Ext.form.TimeField({  // rules about editing
-            allowBlank: false,
-            maxLength: 6
-        })//,
+        editable: false//, forceSelection: true,
+        //editor: new Ext.form.TimeField({  // rules about editing
+        //    allowBlank: false,
+        //    maxLength: 6
+        //})//,
         //xtype: 'datecolumn'
     }, {
         header: OpenLayers.i18n('Speed (m/s)'),
@@ -1122,7 +1186,13 @@ Ext.data.LocalStorageWriter = Ext.extend(Ext.data.DataWriter, {
                 idProperty: 'id'
             }
         });
-        storeWeatherData(rec.data.station, [rec.data]);
+        if (rec instanceof WeatherRecord) {
+            storeWeatherData(rec.data.station, [rec.data]);
+        } else if (rec instanceof WindRecord) {
+            storeWindData(rec.data.station, [rec.data]);
+        } else {
+            alert('Interne fout: onbekend record type')
+        }
         return this.toHash(rec);
     },
     
@@ -1197,9 +1267,24 @@ var windStore = new Ext.data.Store({
     id: 'windStore',
     autoSave: false,
     recordType: WindRecord,
-    sortInfo: { field: 'time', direction: 'ASC' },
+    sortInfo: { field: 'date', direction: 'ASC' },
     reader: {
+        idProperty: 'id',
+        root: 'results',
         readRecords: function() {
+            if (windStore.modified.length > 0) {
+                // eerst opslaan store indien er gewijzigde records zijn
+                console.log('modified', windStore.modified);
+                var dataset = [];
+                for (var i = 0; i < windStore.modified.length; i++) {
+                    dataset.push(windStore.modified[i].data);
+                }
+                for (var i = 0; i < dataset.length; i++) {
+                    dataset[i].isModified = 1;
+                }
+                storeWindData(dataset[0].station, dataset);
+            }
+            
             var station = Ext.getCmp('weatherstation');
             var records = getWindData(station.value);
             return {
@@ -1207,11 +1292,12 @@ var windStore = new Ext.data.Store({
             };
         }
     },
-    writer: new Ext.data.JsonWriter({
-        encode: true,
-        writeAllFields: false
+    writer: new Ext.data.LocalStorageWriter({//new Ext.data.JsonWriter({
+        //encode: true,
+        //writeAllFields: false
     })
 });
+windStore.proxy = {request: Ext.emptyFn}; // hack om save() goed te laten gaan
 
 var weatherGrid = new Ext.grid.EditorGridPanel({
     id: 'weathergrid',
@@ -2004,23 +2090,6 @@ Ext.onReady(function() {
         rootVisible: false,
         lines: false,
         bbar: tree_btns,
-        bbarx: [{
-    items: [
-      'First Toolbar',
-      {xtype: 'button', text: 'Button 1a', handler: not_implemented},
-      {text: 'Button 1b', handler: not_implemented}
-    ]
-  }, {
-    items: [
-      'Second Toolbar',
-      {text: 'Button 2', handler: not_implemented}
-    ]
-  }, {
-    items: [
-      'Thrid Toolbar',
-      {text: 'Button 3', handler: not_implemented}
-    ]
-  }],
         bbarCfg: {
             //cls: 'x-panel-bbar',  // Default class not applied if Custom element specified
             //html: 'Message'
@@ -2499,9 +2568,10 @@ Ext.onReady(function() {
                                         } else {
                                             var url = '/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=' +
                                                 layers[0].params['LAYERS'] + '&maxFeatures=1000&outputFormat=SHAPE-ZIP';
-
+                                        
                                             Ext.MessageBox.show({
-                                                msg: '<a target="_blank" href="' + url + '">Klik here to download the shapefile</a>',
+                                                //msg: '<a target="_blank" href="' + url + '">' + OpenLayers.i18n('Click here to download the shapefile') + '</a>',
+                                                msg: '<a href="#" onclick="javascript:Gmi.downloadOnClick(\'' + url + '\')">' + OpenLayers.i18n('Click here to download the shapefile') + '</a>',
                                                 width: 300,
                                                 title: OpenLayers.i18n('Export shape file')
                                             });
@@ -2660,6 +2730,9 @@ Ext.onReady(function() {
     };
     var runner = new Ext.util.TaskRunner();
     runner.start(task);
+    
+    // navigate control aanzetten; of ophalen via displayClass = olControlEditingToolbar
+    toolbar.activateControl(toolbar.controls[0]);
 });
 
 function zpad(i, width) {
@@ -2828,10 +2901,15 @@ function windStoreAsString() {
 function drawFireLine() {
     // drawfeature knop activeren
     var map = mapPanel.map;
-    //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
-    var controls = map.getControlsByClass('OpenLayers.Control.DrawFeature');
-    if (controls.length > 0) {
-        controls[0].activate();
+
+    var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
+    if (toolbar.length > 0) {
+        //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
+        var controls = toolbar[0].getControlsByClass('OpenLayers.Control.DrawFeature');
+        if (controls.length > 0) {
+            //controls[0].activate();
+            toolbar[0].activateControl(controls[0]);
+        }
     }
 };
 
@@ -3016,16 +3094,17 @@ var wpsSuccessCallback = function(response, options) {
                         var params = {};
                         //console.log(check_response);
                         try {
-                            params = JSON.parse(check_response.responseText);
+                            var text = check_response.responseText; //.replace('\n', '\\n');
+                            params = JSON.parse(text);
                         } catch (err) {
                             params.status = 'error';
-                            params.lastMessage = check_response.responseText;
+                            params.lastmessage = check_response.responseText;
                         }
                         if (params.status === 'error') {
                             runner.stop(task); 
                             stopProgress();
                             console.log('wfs taak ging fout', params);
-                            alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastMessage}));
+                            alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastmessage}));
                         } else if (params.percentage == 100) {
                             runner.stop(task); 
                             stopProgress();
@@ -3064,7 +3143,7 @@ var wpsSuccessCallback = function(response, options) {
     } else if (params.status === 'error') {
         // fout
         stopProgress();
-        alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastMessage}));
+        alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastmessage}));
     } else {
         stopProgress();
         // onbekende veld
@@ -3094,6 +3173,11 @@ function updateProgress(i, perc) {
 
 function stopProgress() {
     Ext.MessageBox.hide();
+};
+
+Gmi.downloadOnClick = function(url) {
+    Ext.MessageBox.hide();
+    window.open(url);
 };
 
 function combineParams(o, sep) {
