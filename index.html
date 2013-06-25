@@ -12,6 +12,8 @@
         <link rel="stylesheet" type="text/css"
               href="./externals/ext-3.4.1/resources/css/xtheme-gray.css" />
         
+        <!-- check geodan online -->
+        <script type="text/javascript" src="http://model.geodan.nl/main/gmi/externals/geodan.js"></script>
         <!-- EITHER default ext js adapter -->
         <!--script type="text/javascript" src="externals/ext-3.4.1/adapter/ext/ext-base-debug.js"></script-->
         <!-- OR jquery library and related extjs adapter -->
@@ -199,6 +201,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Terrain": "Terrein",
     "Terrein ID": "Terrein ID",
     "Time": "Tijd",
+    "Topography": "Topografie",
     "Warning": "Waarschuwing",
     "Weather": "Weer",
     "Weather characteristics": "Weergegevens",
@@ -1901,8 +1904,8 @@ Ext.onReady(function() {
                     visibility: true
                 }
             ),*/
-            new OpenLayers.Layer.OSM(),
             new OpenLayers.Layer(OpenLayers.i18n('Geen achtergrondlaag'), {isBaseLayer: true}),
+            new OpenLayers.Layer.OSM(),
             /*new OpenLayers.Layer.WMS('Water', '/geoserver/wms?', {
                     layers: 'nl_data:waterdeel_vlak',
                     format: 'image/png',
@@ -1913,13 +1916,13 @@ Ext.onReady(function() {
                     maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),*/
-            new OpenLayers.Layer.WMS('Topo', '/geoserver/wms?', {
+            new OpenLayers.Layer.WMS(OpenLayers.i18n('Topography'), '/geoserver/wms?', {
                     layers: 'nl_data:terrein',
                     format: 'image/png',
                     transparent: true,
                     tiled:true
                 }, {
-                    isBaseLayer: false,
+                    isBaseLayer: true,
                     visibility: false,
                     maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
@@ -2762,6 +2765,25 @@ Ext.onReady(function() {
     
     // navigate control aanzetten; of ophalen via displayClass = olControlEditingToolbar
     toolbar.activateControl(toolbar.controls[0]);
+    
+    // begin achtergrondlaag
+    var baseClass = null;
+    if (window.Geodan) {
+        // online -> osm
+        baseClass = 'OpenLayers.Layer.OSM';
+    } else {
+        // offline -> topo
+        baseClass = 'OpenLayers.Layer.WMS';
+    }
+    if (baseClass) {
+        var baseLayers = mapPanel.map.getLayersBy('isBaseLayer', true);
+        for (var i = 0; i < baseLayers.length; i++) {
+            if (baseLayers[i].CLASS_NAME == baseClass) {
+                mapPanel.map.setBaseLayer(baseLayers[i]);
+                break;
+            }
+        }
+    }
 });
 
 function zpad(i, width) {
