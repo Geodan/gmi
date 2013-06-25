@@ -16,7 +16,7 @@ import sys, os
 # Designed to prevent Open Proxy type stuff.
 
 allowedHosts = ['services.geodan.nl','192.168.40.8:3389','smoke-plume.argoss.nl','osgis.geodan.nl',
-		'www.openlayers.org', 'openlayers.org', 
+		'www.openlayers.org', 'openlayers.org','www.knmi.nl', 
                 'labs.metacarta.com', 'world.freemap.in', 
                 'prototype.openmnnd.org', 'geo.openplans.org',
                 'sigma.openplans.org', 'demo.opengeo.org',
