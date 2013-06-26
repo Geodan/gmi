@@ -3278,7 +3278,7 @@ Gmi.updateUserDefaults = function(obj) {
         defaults = '{}';
     }
     defaults = JSON.parse(defaults);
-    OpenLayers.Util.applyDefaults(defaults, obj);
+    OpenLayers.Util.extend(defaults, obj);
     localStorage['userDefaults'] = JSON.stringify(defaults);
     return defaults;
 };
