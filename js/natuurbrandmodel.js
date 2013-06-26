@@ -784,7 +784,7 @@ function getWindData(station) {
         speed: Gmi.Settings.weatherDefaults.speed,
         direction: Gmi.Settings.weatherDefaults.direction,
         cloudiness: Gmi.Settings.weatherDefaults.cloudiness,
-        isModified: 1
+        isModified: 0 // default not modified for wind
     });
     // extra uren
     for (var i = 1; i <= Gmi.Settings.windHours; i++) {
@@ -798,7 +798,7 @@ function getWindData(station) {
             speed: Gmi.Settings.weatherDefaults.speed,
             direction: Gmi.Settings.weatherDefaults.direction,
             cloudiness: Gmi.Settings.weatherDefaults.cloudiness,
-            isModified: 1
+            isModified: 0 // default not modified for wind
         });
     }
     
@@ -1393,12 +1393,19 @@ var weathersettingsWindow = new Ext.Window({
     buttons:[{
         text: OpenLayers.i18n('Close'), 
         handler: function() {
+            weathersettingsWindow.hide();
+        }
+    }],
+    listeners: {
+        'hide': function(self, event) {
             if (weatherStore.modified.length > 0) {
                 weatherStore.save();
             }
-            weathersettingsWindow.hide();
+            if (windStore.modified.length > 0) {
+                windStore.save();
+            }
         }
-    }]
+    }
 });
 weathersettingsWindow.hide();
 
