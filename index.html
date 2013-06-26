@@ -1927,7 +1927,7 @@ Ext.onReady(function() {
                 }, {
                     isBaseLayer: false,
                     visibility: false,
-                    maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
+                    //maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),*/
             new OpenLayers.Layer.WMS(OpenLayers.i18n('Topography'), '/geoserver/wms?', {
@@ -1938,7 +1938,8 @@ Ext.onReady(function() {
                 }, {
                     isBaseLayer: true,
                     visibility: false,
-                    maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
+                    //maxExtent geeft problemen bij het gebruiken van de geoWebCache van geoserver
+                    //maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),
             new OpenLayers.Layer.WMS(OpenLayers.i18n('KNMI Neerslagradar'), 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?', {
