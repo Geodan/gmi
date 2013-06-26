@@ -1409,10 +1409,12 @@ Gmi.getSortedStoreData = function(store) {
     return data;
 };
 
-Gmi.checkModelDateInStoreData = function(store) {
+Gmi.checkModelDateInStoreData = function(store, model_date) {
     var data = Gmi.getSortedStoreData(store);
     if (data.length > 0) {
-        var model_date = getModelDateTime();
+        if (!model_date) {
+            model_date = getModelDateTime();
+        }
         if (model_date.valueOf() < data[0].data.date.valueOf()
         || model_date.valueOf() > data[data.length-1].data.date.valueOf()) {
             return false;
@@ -1423,16 +1425,6 @@ Gmi.checkModelDateInStoreData = function(store) {
 
 function showClimateData() {
     // todo: controleer dat de weergegevens voor de model tijd geldig zijn
-    if (!Gmi.checkModelDateInStoreData(weatherStore)) {
-        // opnieuw opvragen
-        weatherStore.clearData();
-        console.log('model_date valt buiten data range voor weatherStore');
-    }
-    if (!Gmi.checkModelDateInStoreData(windStore)) {
-        // opnieuw opvragen
-        windStore.clearData();
-        console.log('model_date valt buiten data range voor windStore');
-    }
 
     weathersettingsWindow.show();
     
@@ -3019,17 +3011,6 @@ function startModelRun() {
     var wkt = geom.toString();
     //var wkt = 'LINESTRING(' + center.lon +' ' + center.lat + ', ' + center.lon +' ' + center.lat + ')';
 */
-    if (!Gmi.checkModelDateInStoreData(weatherStore)) {
-        // opnieuw opvragen
-        weatherStore.clearData();
-        console.log('model_date valt buiten data range voor weatherStore');
-    }
-    if (!Gmi.checkModelDateInStoreData(windStore)) {
-        // opnieuw opvragen
-        windStore.clearData();
-        console.log('model_date valt buiten data range voor windStore');
-    }
-
     // weather/wind data
     var station = Ext.getCmp('weatherstation').getValue();
     var weatherString = weatherStoreAsString();
