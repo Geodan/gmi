@@ -616,7 +616,7 @@ function storeWindData(station, data) {
     }
     for (var i = 0; i < data.length; i++) {
         // element van data array opslaan in dict met yyyymmdd als key
-        value[data[i].date.dateFormat('Ymd')] = data[i];
+        value[data[i].date.dateFormat('YmdHi')] = data[i];
     }
     localStorage[key] = JSON.stringify(value);
 };
@@ -781,11 +781,11 @@ function getWindData(station) {
     var end_ymd = end.dateFormat('YmdHi');
     
     // read from local storage
-    var data = [];
     var key = station + '_wind';
     var station_data = localStorage[key];
     if (station_data) {
         station_data = JSON.parse(station_data); // meest onderscheidend vooraan
+        /*
         var count_missing_hours = Gmi.Settings.windHours + 1;
         //var count_modified_days_before_today = 0;
         var today = new Date().clearTime();
@@ -817,44 +817,49 @@ function getWindData(station) {
                 console.log('all wind data from local storage', data);
                 return windDataToRecords(end_ymd, data);
             }
-        }
+        }*/
+    } else {
+        station_data = {};
     }
         
-    var records = [];
-    var windRecord = windStore.recordType; // ipv direct
-    records.push(new windRecord({
+    //var records = [];
+    var data = [];
+    var id = start.dateFormat('YmdHi');
+    data.push(station_data[id] ? station_data[id] : {
         station: station,
         date: start,
         time: zpad(start.getHours(), 2) + ':00',
         speed: Gmi.Settings.weatherDefaults.speed,
         direction: Gmi.Settings.weatherDefaults.direction,
-        cloudiness: Gmi.Settings.weatherDefaults.cloudiness
-    }));
+        cloudiness: Gmi.Settings.weatherDefaults.cloudiness,
+        isModified: 1
+    });
     // extra uren
     for (var i = 1; i <= Gmi.Settings.windHours; i++) {
         var next = new Date(start);
         next.increment(i/24);
-        records.push(new windRecord({
+        id = next.dateFormat('YmdHi');
+        data.push(station_data[id] ? station_data[id] : {
             station: station,
             date: next,
             time: zpad(next.getHours(), 2) + ':00',
             speed: Gmi.Settings.weatherDefaults.speed,
             direction: Gmi.Settings.weatherDefaults.direction,
-            cloudiness: Gmi.Settings.weatherDefaults.cloudiness
-        }));
+            cloudiness: Gmi.Settings.weatherDefaults.cloudiness,
+            isModified: 1
+        });
     }
-    /* volgende dag
-    var tomorrow = new Date(model_datetime);
-    tomorrow.increment( +1 );
-    records.push(new windRecord({
-        station: station,
-        date: tomorrow,
-        time: zpad(tomorrow.getHours(), 2) + ':00',
-        speed: avg_speed,
-        direction: avg_direction,
-        cloudiness: 0
-    }));*/
-    return records;
+    
+    for (var i = 0; i < data.length; i++) {
+        if (typeof data[i].date == 'string') {
+            data[i].date = new Date(data[i].date);
+        }
+    }
+
+    storeWindData(station, data);
+    
+    return windDataToRecords(end_ymd, data);
+    //return records;
 };
 
 Gmi.makeSubset = function() {
@@ -1098,7 +1103,7 @@ var windColumnModel = new Ext.grid.ColumnModel({
             allowBlank: false,
             decimalSeparator: Gmi.Settings.decimalSeparator,
             minValue: 0,
-            maxLength: 3
+            maxLength: 4
         }),
         dataIndex: 'speed',
         xtype: 'numbercolumn'
