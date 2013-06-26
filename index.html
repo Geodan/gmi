@@ -124,6 +124,16 @@ if (location.host === 'brand.localhost') {
 } else {
     Gmi.Settings.openLayers_proxyHost = 'cgi-bin/proxy.cgi?url=';
 }
+
+Gmi.userDefaults = localStorage['userDefaults'];
+if (typeof Gmi.userDefaults === 'undefined') {
+    Gmi.userDefaults = {
+        station: 275 // Deelen
+    };
+} else {
+    Gmi.userDefaults = JSON.parse(Gmi.userDefaults);
+};
+
 Gmi.Settings.maxArea = 10000 * 10000; // m2; 10 bij 10 km, 100 km2
 Gmi.Settings.tijd_afronding_minuten = 5;
 Gmi.Settings.operationalMode = 1;
@@ -132,7 +142,7 @@ Gmi.Settings.datetimeFormat = 'Y-m-d H:i';
 Gmi.Settings.decimalSeparator = '.'; // werkt niet met ,
 Gmi.Settings.maxZoomOnMoveToTerrain = 14; // 14 = 1:34K
 Gmi.Settings.weatherDaysBefore = 6;
-Gmi.Settings.weatherDefaults = {tmin: 15, tmax: 30, hmin: 50, hmax: 100, precipitation: 0, speed: 3.3, direction: 225, cloudiness: 0};
+Gmi.Settings.weatherDefaults = {station: Gmi.userDefaults.station, tmin: 15, tmax: 30, hmin: 50, hmax: 100, precipitation: 0, speed: 3.3, direction: 225, cloudiness: 0};
 Gmi.Settings.windHours = 6;
 
 Gmi.Session.userid = '0';
@@ -1396,7 +1406,7 @@ var weathersettingsWindow = new Ext.Window({
             //align: 'right',
             region: 'north',
             mode: 'local',
-            value: 275, // default: Deelen
+            value: Gmi.Settings.weatherDefaults.station, // default: Deelen
             forceSelection: true, editable: false,
             store: new Ext.data.ArrayStore({
                 id: 0,
@@ -1414,6 +1424,9 @@ var weathersettingsWindow = new Ext.Window({
                     weatherStore.loadData();
                     windStore.loadData();
                     console.log('select weather station', arguments);
+                    
+                    // update user defaults
+                    Gmi.updateUserDefaults({station: event.data.id});
                 }
             }
         }),
@@ -2507,7 +2520,7 @@ Ext.onReady(function() {
                                     anchor: '100%',
                                     align: 'right',
                                     mode: 'local',
-                                    value: 275, // default: Deelen
+                                    value: Gmi.Settings.weatherDefaults.station, // default: Deelen
                                     forceSelection: true, editable: false,
                                     store: new Ext.data.ArrayStore({
                                         id: 0,
@@ -2522,11 +2535,15 @@ Ext.onReady(function() {
                                     listeners: {
                                         'select': function(combobox, event) {
                                             // koppelen aan andere lijst
-                                            Ext.getCmp('weatherstation2').setValue(combobox.getValue());
+                                            var station_id = combobox.getValue();
+                                            Ext.getCmp('weatherstation2').setValue(station_id);
                                             
                                             // refresh data
                                             weatherStore.clearData();
                                             windStore.clearData();
+                                            
+                                            // update user defaults
+                                            Gmi.updateUserDefaults({station: station_id});
                                         }
                                     }
                                 }),
@@ -3253,6 +3270,17 @@ function stopProgress() {
 Gmi.downloadOnClick = function(url) {
     Ext.MessageBox.hide();
     window.open(url);
+};
+
+Gmi.updateUserDefaults = function(obj) {
+    var defaults = localStorage['userDefaults'];
+    if (!defaults) {
+        defaults = '{}';
+    }
+    defaults = JSON.parse(defaults);
+    OpenLayers.Util.applyDefaults(defaults, obj);
+    localStorage['userDefaults'] = JSON.stringify(defaults);
+    return defaults;
 };
 
 function combineParams(o, sep) {
