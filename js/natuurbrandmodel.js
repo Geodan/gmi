@@ -6,7 +6,7 @@
 // settings
 Ext.namespace('Gmi.Control', 'Gmi.Data', 'Gmi.Params', 'Gmi.Services', 'Gmi.Services.WPS', 'Gmi.Session', 'Gmi.Settings');
 
-Gmi.Settings.debug = (location.host === 'brand.localhost'); // alleen lokaal default aan 
+Gmi.Settings.debug = false; //(location.host === 'brand.localhost'); // alleen lokaal default aan 
 
 // params in url
 Gmi.Params = Gmi.Params || {};
@@ -120,6 +120,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Fuel model is undefined.": "Het terrein is niet opgeslagen.",
     "Initializing...": "Initialiseren",
     "Is modified?": "Gewijzigd?",
+    "Last segment: ${distance} ${units}": "Laatste stuk: ${distance} ${units}",
     "Layers": "Kaartlagen",
     "Measure distances in map": "Bepaal afstanden in kaart",
     "Modify existing fire line": "Wijzig huidige vuurfront",
@@ -655,10 +656,11 @@ function getClimateData(station) {
                     if (station > 0 && station_data[d_ymd]['date'].valueOf() < today.valueOf() && station_data[d_ymd]['isModified'] === 1) {
                         count_modified_days_before_today += 1;
                     }
+                    count_missing_days -= 1;
                 } else {
                     //break;
+                    // day is missing in localstorage
                 }
-                count_missing_days -= 1;
                 d.increment( +1 );
             }
             if (count_modified_days_before_today === 0 && (count_missing_days === 0 || (count_missing_days === 1 && last_d.dateFormat('Ymd') == today_ymd))) {
@@ -1416,22 +1418,47 @@ Gmi.getSortedStoreData = function(store) {
     return data;
 };
 
-Gmi.checkModelDateInStoreData = function(store, model_date) {
+Gmi.checkDateInStoreData = function(store, dates) {
     var data = Gmi.getSortedStoreData(store);
     if (data.length > 0) {
-        if (!model_date) {
-            model_date = getModelDateTime();
+    	
+        if (!dates) {
+            dates = getModelDateTime();
         }
-        if (model_date.valueOf() < data[0].data.date.valueOf()
-        || model_date.valueOf() > data[data.length-1].data.date.valueOf()) {
-            return false;
+        if (dates instanceof Date) {
+            dates = [dates];
         }
+        //console.assert(dates instanceof Array, '');
+        for (var i = 0; i < dates.length; i++) {
+            if (dates[i].valueOf() < data[0].data.date.valueOf()
+            || dates[i].valueOf() > data[data.length-1].data.date.valueOf()) {
+                return false;
+            }
+        }
+    } else {
+        // niets te controleren
     }
     return true;
 };
 
+Gmi.checkModelDatesInStores = function() {
+    var model_date = Ext.getCmp('model_date').getValue();
+    if (!Gmi.checkDateInStoreData(weatherStore, [model_date, new Date(model_date).increment(-Gmi.Settings.weatherDaysBefore)])) {
+        // forceer opnieuw opvragen
+        weatherStore.clearData();
+        console.log('model_date valt buiten data range voor weatherStore');
+    }
+    var model_datetime = getModelDateTime();
+    if (!Gmi.checkDateInStoreData(windStore, [model_datetime, new Date(model_datetime).increment(Gmi.Settings.windHours/24)])) {
+        // forceer opnieuw opvragen
+        windStore.clearData();
+        console.log('model_date valt buiten data range voor windStore');
+    }
+};
+
 function showClimateData() {
     // todo: controleer dat de weergegevens voor de model tijd geldig zijn
+    Gmi.checkModelDatesInStores();
 
     weathersettingsWindow.show();
     
@@ -1767,7 +1794,10 @@ Ext.onReady(function() {
                     units: evt.units
                 });
             } else*/ {
-                str += '<br/>Last segment: ' + (lastLengthArr[1] === 'km' ?  lastLengthArr[0].toFixed(3) : lastLengthArr[0].toFixed(1)) + ' ' + lastLengthArr[1];
+                str += '<br/>' + OpenLayers.i18n('Last segment: ${distance} ${units}', {
+                    distance: (lastLengthArr[1] === 'km' ?  lastLengthArr[0].toFixed(3) : lastLengthArr[0].toFixed(1)), 
+                    units: lastLengthArr[1]
+                });
             }
         }
 
@@ -3018,6 +3048,8 @@ function startModelRun() {
     var wkt = geom.toString();
     //var wkt = 'LINESTRING(' + center.lon +' ' + center.lat + ', ' + center.lon +' ' + center.lat + ')';
 */
+    Gmi.checkModelDatesInStores();
+    
     // weather/wind data
     var station = Ext.getCmp('weatherstation').getValue();
     var weatherString = weatherStoreAsString();
