@@ -2124,18 +2124,18 @@ Ext.onReady(function() {
         },
         listeners: {
             'click': function(node, event) {
-                if (jQuery(event.target).hasClass('gx-tree-layer-icon')) {
+                if (jQuery(event.target).hasClass('gx-tree-layer-icon') || jQuery(event.target).hasClass('gx-tree-baselayer-icon')) {
                     // toggle legendgraphic
                     console.log('toggle legendgraphic', node);
+                    var legendGraphicUrl = null;
                     if (jQuery('.g-legendgraphic', event.target.parentNode.parentNode).length >= 1) {
                         jQuery('.g-legendgraphic', event.target.parentNode.parentNode).remove();
+                    } else if (node.layer.legend && node.layer.legend.url) {
+                        legendGraphicUrl = node.layer.legend.url;
                     } else if (node.layer.CLASS_NAME === 'OpenLayers.Layer.WMS') {
-                        var legendGraphicUrl;
-                        if (node.layer.legend && node.layer.legend.url) {
-                            legendGraphicUrl = node.layer.legend.url;
-                        } else {
-                            legendGraphicUrl = node.layer.url + 'SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=' + node.layer.params.LAYERS;
-                        }
+                        legendGraphicUrl = node.layer.url + 'SERVICE=WMS&REQUEST=GetLegendGraphic&VERSION=1.0.0&FORMAT=image/png&WIDTH=20&HEIGHT=20&LAYER=' + node.layer.params.LAYERS;
+                    }
+                    if (legendGraphicUrl) {
                         jQuery(event.target.parentNode.parentNode).append('<div class="g-legendgraphic"><img src="' + legendGraphicUrl + '"></img></div>');
                     }
                 }
@@ -2897,9 +2897,7 @@ function weatherStoreAsString() {
     
     //var weatherData = weatherStore.getRange();
     // weergegevens sorteren op datum
-    var weatherData = weatherStore.getRange().sort(function(a,b){
-        return a.data['date'].valueOf() - b.data['date'].valueOf();
-    });
+    var weatherData = Gmi.getSortedStoreData(weatherStore);
                 // weather: (month,day,precip,hour1,hour2,tlo,thi,hhi,hlo,elv), etc (6 dagen)
                 //weatherstring: '(05,12,00,0500,1500,15,32,60,15,0000),(05,13,00,0500,1500,15,32,50,10,0000),(05,14,00,0500,1500,15,32,50,11,0000),(05,15,00,0500,1500,15,32,60,10,0000),(05,16,00,0500,1500,15,32,50,10,0000),(05,17,00,0500,1500,15,32,50,10,0000)', 
 
@@ -2952,9 +2950,7 @@ function windStoreAsString() {
                 // wind: (month,day,hour,speed,dir,cl), etc (6 uren)
                 //windstring: '(5,16,1508,00,180,10),(5,16,1608,00,180,10),(5,16,1708,00,180,10),(5,16,1808,00,180,10),(5,16,1908,00,180,10),(5,17,2008,00,180,10)', 
     //windStore.sort('date', 'asc');
-    var windData = windStore.getRange().sort(function(a,b){
-        return a.data['date'].valueOf() - b.data['date'].valueOf();
-    });
+    var windData = Gmi.getSortedStoreData(windStore);
 
     var windString = '';
     var month, day, speed, dir, cl, hhmm;
