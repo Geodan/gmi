@@ -207,13 +207,17 @@ class farsiteRun():
 		#result = cur.fetchone()
 		self.updateStatus(runid, "running", 50, "Verwerken uitvoer")
 		#TODO: error checking
+		#Create layersource
 		curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>result_'+str(runid)+'</name></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	
 		os.system(curlstring)
+		#Create layer
 		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><title>'+name+'</title></featureType>" 		http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
+		#Add CRS to layer
 		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>EPSG:28992</nativeCRS></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
-		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><srs>EPSG:28992</srs></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
+		#Add srs to layer
+		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><srs>EPSG:28992</srs><enabled>true</enabled></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
 		#Freakin bug, you have to add 'enabled': http://comments.gmane.org/gmane.comp.gis.geoserver.user/26753
 		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<layer><defaultStyle><name>isochrones</name></defaultStyle><enabled>true</enabled></layer>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/layers/model_wildfire:result_'+str(runid)

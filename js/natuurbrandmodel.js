@@ -1877,7 +1877,7 @@ Ext.onReady(function() {
             }
         }),
         new OpenLayers.Control.Zoom({title: OpenLayers.i18n('Change zoom')}),
-        new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: '', title: OpenLayers.i18n('Scale line')}),
+        new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: '', title: OpenLayers.i18n('Scale line'), geodesic: true}),
         //new OpenLayers.Control.Permalink(), // todo: uitzoeken werking geoext met permalink
         toolbar
     ];
