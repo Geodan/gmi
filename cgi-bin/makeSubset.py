@@ -49,7 +49,6 @@ WITH selectionbox AS (
 SELECT 
 	nextval('counter') As gid,
 	a.typelandgebruik, 
-	a.typelandgebruik_c1, 
 	c.fuel_id,
 	d.description,
 	d.carrier,
@@ -62,7 +61,7 @@ SELECT
 FROM top10nl.terrein a, selectionbox b, administration.landuse2fuel c
 LEFT JOIN administration.fuelmodels d ON (c.fuel_id = d.id)
 	WHERE ST_Intersects(a.wkb_geometry,b.geom)
-	AND a.typelandgebruik_c1 = c.landuse_id
+	AND a.typelandgebruik = c.landuse_name
 )
 SELECT * FROM dump WHERE ST_GeometryType(geom) = 'ST_Polygon'
 )

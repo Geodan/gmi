@@ -169,7 +169,7 @@ class farsiteRun():
 		#curlstring = 'curl -G -d "id='+str(runid)+'&coords=' + point + '&template='+template+'&weather='+ weatherString +'&wind=' + windString + '&day='+startDay+'&month='+startMonth+'&hour='+startHour+'&min=00&interval=1&duration=6" ' + url
 
 		callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
-		killstring = "sleep 10 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
+		killstring = "sleep 30 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
 		
 		
 		try:
@@ -185,7 +185,7 @@ class farsiteRun():
 		except:
 			self.updateStatus(runid, "error", 20, "Error in farsite")
 			return
-		
+		self.updateStatus(runid, "running", 20, "Exporteren uitvoer")
 		pgserver_host = settings.pgserver_host #'192.168.40.5'
 		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
@@ -196,8 +196,14 @@ class farsiteRun():
 		query = """
 			DELETE FROM model_wildfire.result_%s WHERE fire_type = 'Enclave Fire';
 			UPDATE model_wildfire.result_%s SET wkb_geometry = ST_SimplifyPreserveTopology(wkb_geometry,10);
-			""" % (str(runid),str(runid))
-		cur.execute(query )
+			"""
+		self.updateStatus(runid, "running", 30, "Verwijder enclave fire")
+		try:
+			data = (runid, runid, )
+			cur.execute(query, data )
+			self.updateStatus(runid, "running", 40, "Trying")
+		except e:
+			self.updateStatus(runid, "running", 40, "Caught")
 		#result = cur.fetchone()
 		self.updateStatus(runid, "running", 50, "Verwerken uitvoer")
 		#TODO: error checking

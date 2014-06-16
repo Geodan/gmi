@@ -1722,7 +1722,8 @@ Ext.onReady(function() {
     
     var measureControl = new OpenLayers.Control.Measure( OpenLayers.Handler.Path, {
         immediate: true,
-        persist: true,
+        geodesic: true,
+	persist: true,
         displayClass: 'olControlMeasure',
         title: OpenLayers.i18n('Measure distances in map'),
         handlerOptions: {
