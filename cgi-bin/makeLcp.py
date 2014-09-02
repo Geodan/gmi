@@ -1,5 +1,5 @@
 #!/usr/bin/python
-print 'Content-type: text/plain\n'
+print 'Content-type: text/plain\n\n'
 
 # Import modules for CGI handling
 import os,cgi, cgitb
@@ -66,15 +66,14 @@ class makeLcp():
 				ELSE ST_Collect(geom)
 			END As geom, 
 			typelandgebruik, 
-			typelandgebruik_c1, 
 			fuel_id
 		FROM model_wildfire.terrein_%(terreinid)s
-		GROUP BY typelandgebruik, typelandgebruik_c1, fuel_id
+		GROUP BY typelandgebruik, fuel_id
 		
 	)
 	/** Stamp rasters uit de geometrieen. Voor elke type 1 **/
 	,layers As(
-		SELECT nextval('counter') As rid,typelandgebruik,typelandgebruik_c1, fuel_id,
+		SELECT nextval('counter') As rid,typelandgebruik, fuel_id,
 			ST_AsRaster(geom, 
 				canvas.rast
 				,'8BUI',fuel_id,0
@@ -85,6 +84,7 @@ class makeLcp():
 	SELECT 1 As rid, 
 	ST_Union(rast) rast 
 	FROM layers;
+	SELECT AddRasterConstraints('model_wildfire', 'fuelmodel_%(runid)s'::name, 'rast'::name);
 		"""
 		data = ({'runid':runid,'terreinid':terreinid})
 		self.cur.execute(query,data )
@@ -129,6 +129,7 @@ class makeLcp():
 	DROP TABLE IF EXISTS model_wildfire.aspect_%(runid)s;
 	CREATE TABLE model_wildfire.aspect_%(runid)s As
 	SELECT 1 As rid, ST_Reclass(ST_Aspect(rast,1,'32BF'),'0-6.2832:0-360','32BF') rast FROM model_wildfire.ahn1_%(runid)s;
+SELECT AddRasterConstraints('model_wildfire', 'ahn1_%(runid)s'::name, 'rast'::name);
 		"""
 		data = ({'runid':runid})
 		#TT: Disabled the use of DEMS (no AHN data available)
@@ -152,6 +153,7 @@ class makeLcp():
 	)	
 	
 	SELECT 1 As rid, rast FROM canvas;
+	SELECT AddRasterConstraints('model_wildfire', 'emptyraster_%(runid)s'::name, 'rast'::name);
 		"""
 		data = ({'runid':runid})
 		self.cur.execute(query,data )
@@ -160,6 +162,7 @@ class makeLcp():
 		self.updateStatus(runid, "running", 50)
 		print('starting gdal')
 		#FUEL
+		sys.stdout.flush()
 		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=fuelmodel_"+str(runid)+"\" "+ self.output_path + "/fuelmodel.asc", shell=True)      
 		#ELEV
 		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser schema=model_wildfire table=ahn1_"+str(runid)+"\" " + self.output_path + "/ahn1.asc", shell=True)

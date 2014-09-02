@@ -185,7 +185,7 @@ class farsiteRun():
 		except:
 			self.updateStatus(runid, "error", 20, "Error in farsite")
 			return
-		
+		self.updateStatus(runid, "running", 20, "Exporteren uitvoer")
 		pgserver_host = settings.pgserver_host #'192.168.40.5'
 		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
@@ -196,18 +196,28 @@ class farsiteRun():
 		query = """
 			DELETE FROM model_wildfire.result_%s WHERE fire_type = 'Enclave Fire';
 			UPDATE model_wildfire.result_%s SET wkb_geometry = ST_SimplifyPreserveTopology(wkb_geometry,10);
-			""" % (str(runid),str(runid))
-		cur.execute(query )
+			"""
+		self.updateStatus(runid, "running", 30, "Verwijder enclave fire")
+		try:
+			data = (runid, runid, )
+			cur.execute(query, data )
+			self.updateStatus(runid, "running", 40, "Trying")
+		except e:
+			self.updateStatus(runid, "running", 40, "Caught")
 		#result = cur.fetchone()
 		self.updateStatus(runid, "running", 50, "Verwerken uitvoer")
 		#TODO: error checking
+		#Create layersource
 		curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>result_'+str(runid)+'</name></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	
 		os.system(curlstring)
+		#Create layer
 		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><title>'+name+'</title></featureType>" 		http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
+		#Add CRS to layer
 		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>EPSG:28992</nativeCRS></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
-		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><srs>EPSG:28992</srs></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
+		#Add srs to layer
+		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><srs>EPSG:28992</srs><enabled>true</enabled></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/result_'+str(runid)
 		os.system(curlstring)
 		#Freakin bug, you have to add 'enabled': http://comments.gmane.org/gmane.comp.gis.geoserver.user/26753
 		curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<layer><defaultStyle><name>isochrones</name></defaultStyle><enabled>true</enabled></layer>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/layers/model_wildfire:result_'+str(runid)
