@@ -1,0 +1,5 @@
+AuthType Basic
+AuthName "restricted area"
+AuthUserFile /var/www/main/gmi/.htpasswd
+require valid-user
+
