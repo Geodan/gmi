@@ -27,7 +27,7 @@ lcpmake_path = '/var/www/gmi/bin/lcpmake'
 farsite_path = '/var/www/gmi/bin/farsite'
 output_basepath  = '/var/data/wildfire/'
 ```
-####### settings for geodan research cluser ######
+###### settings for geodan research cluser ######
 ```python
 conn_params = "host=192.168.40.5 port=3389 dbname=research user=secret password=secret"
 pgserver_host = '192.168.40.5'

@@ -886,6 +886,76 @@ Gmi.makeSubset = function() {
 } // make subset
 ;
 
+Gmi.makeSubsetCorine = function() {
+    // kaart variabele beschikbaar maken
+    var map = mapPanel.map;
+    // laag achterhalen
+    var layers = map.getLayersByName('_boxes_');
+    if (layers.length > 0) {
+        // rechthoek achterhalen
+        //var bounds = layers[0].getDataExtent(); // gaat fout omdat deze functie marker.lonlat gebruikt en deze hier null
+        var bounds = layers[0].markers.length > 0 ? layers[0].markers[0].bounds : null;
+        if (!bounds || !bounds.left) {
+            alert(OpenLayers.i18n('Select region first'));
+        } else {
+            // select region knop deactiveren
+            var btn_select_region = Ext.getCmp('btn_select_region');
+            if (btn_select_region.pressed) {
+                btn_select_region.control.box.deactivate();
+                map.removeControl(btn_select_region.control);
+                btn_select_region.doToggle();
+            }
+            Gmi.Session.box = bounds;
+
+            var run_params = {
+                    service: 'WPS',
+                    version: '1.1.0',
+                    request: 'execute',
+                    identifier: 'py:wildfire_makesubset_corine',
+                    datainputs: combineParams({
+                        userid: Gmi.Session.userid,
+                        name: 'test',
+                        left: bounds.left,
+                        lower: bounds.bottom,
+                        right: bounds.right,
+                        upper: bounds.top
+                    }, ';'),
+                    RawDataOutput: 'string',
+                    mimeType: 'application/json'
+                };
+            if (Gmi.Settings.debug) {
+                if (! confirm(OpenLayers.i18n('Subset parameters: \n\n${params}', {params: JSON.stringify(run_params, null, 2)}))) {
+                    return;
+                }
+            }
+
+            // makesubset process aanroepen
+            startProgress(OpenLayers.i18n('Preparing terrain'));
+            Ext.Ajax.request({
+                url: '/geoserver/ows?', 
+                params: run_params,
+                extraParams: {
+                    count: 0
+                },
+                on_finished: function(out_params) {
+                    // reset van fuelmodel_name
+                    Ext.getCmp('fuelmodel_name').setValue(OpenLayers.i18n('untitled'));
+                    // reset van fuelid
+                    Gmi.Session.fuelid = null;
+                    
+                    // TODO: laagnaam terugkrijgen van model
+                    out_params.subset_name = 'model_wildfire:terrein_' + out_params.runid;
+                    // toon terrein laag
+                    showTerrein(map, out_params.runid, out_params.subset_name);
+               },
+               success: wpsSuccessCallback,
+               failure: wpsFailureCallback
+            });
+        }
+    }
+} // make subset corine
+;
+
 var weatherColumnModel = new Ext.grid.ColumnModel({
     defaults: {
         sortable: true, // columns are not sortable by default
@@ -1722,6 +1792,7 @@ Ext.onReady(function() {
     
     var measureControl = new OpenLayers.Control.Measure( OpenLayers.Handler.Path, {
         immediate: true,
+        geodesic: true,
         persist: true,
         displayClass: 'olControlMeasure',
         title: OpenLayers.i18n('Measure distances in map'),
@@ -1876,7 +1947,7 @@ Ext.onReady(function() {
             }
         }),
         new OpenLayers.Control.Zoom({title: OpenLayers.i18n('Change zoom')}),
-        new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: '', title: OpenLayers.i18n('Scale line')}),
+        new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: '', title: OpenLayers.i18n('Scale line'), geodesic: true}),
         //new OpenLayers.Control.Permalink(), // todo: uitzoeken werking geoext met permalink
         toolbar
     ];
@@ -2329,7 +2400,107 @@ Ext.onReady(function() {
                                 }
                             },
                             cls: 'g-actie-knop'
-                        })/*,
+                        }),
+                        new Ext.Button({
+                            text: OpenLayers.i18n("Select corine region"),
+                            //xtype: 'button',
+                            id: 'btn_select_corine_region',
+                            enableToggle: true,
+                            tooltip: OpenLayers.i18n("Select region by dragging a rectangle in the map"),
+                            handler: function(b, e) {
+                                console.log('select region handler', b.pressed);
+                                var map = mapPanel.map;
+                                if (b.pressed) {
+                                    var control = new OpenLayers.Control();
+                                    b.control = control;
+                                    OpenLayers.Util.extend(control, {
+                                        draw: function () {
+                                            // this Handler.Box will intercept the shift-mousedown
+                                            // before Control.MouseDefault gets to see it
+                                            var this_box = new OpenLayers.Handler.Box( control, {
+                                                    "done": this.notice
+                                                    //{"move": function(){ console.log('move')}}, // voor .Drag
+                                                }, {
+                                                    //keyMaskX: OpenLayers.Handler.MOD_SHIFT,
+                                                    moveBox: function(xy) {
+                                                        OpenLayers.Handler.Box.prototype.moveBox.apply(this_box, [xy]);
+                                                        
+                                                        var start = this_box.dragHandler.start;
+                                                        var top = Math.min(start.y, xy.y);
+                                                        var bottom = Math.max(start.y, xy.y);
+                                                        var left = Math.min(start.x, xy.x);
+                                                        var right = Math.max(start.x, xy.x);
+                                                        bounds = new OpenLayers.Bounds(left, bottom, right, top);
+                                                        var ll = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.left, bounds.bottom)); 
+                                                        // upper-right
+                                                        var ur = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.right, bounds.top)); 
+
+                                                        var bounds = new OpenLayers.Bounds(
+                                                            ll.lon.toFixed(0), // left
+                                                            ll.lat.toFixed(0), // bottom
+                                                            ur.lon.toFixed(0), // right
+                                                            ur.lat.toFixed(0) // top
+                                                        );
+                                                        var geom = bounds.toGeometry();
+                                                        var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
+                                                        console.log('moveBox', bounds, area, area > Gmi.Settings.maxArea ? 'TOO LARGE' : '');
+                                                        measureTip.show(area > Gmi.Settings.maxArea ? OpenLayers.i18n('Too large') : OpenLayers.i18n('Area ${area}', {area: areaWithUnit(area)}))
+                                                    }/*,
+                                                    endBox: function(end) {
+                                                        OpenLayers.Handler.Box.prototype.endBox.apply(this_box, [end]);
+                                                        console.log('endBox', this_box, end);
+                                                    }*/
+                                                }
+                                            );
+                                            this.box = this_box;
+                                            this.box.activate();
+                                        },
+
+                                        notice: function (bounds) {
+                                            // lower-left
+                                            var ll = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.left, bounds.bottom)); 
+                                            // upper-right
+                                            var ur = map.getLonLatFromPixel(new OpenLayers.Pixel(bounds.right, bounds.top)); 
+
+                                            var bounds = new OpenLayers.Bounds(
+                                                ll.lon.toFixed(0), // left
+                                                ll.lat.toFixed(0), // bottom
+                                                ur.lon.toFixed(0), // right
+                                                ur.lat.toFixed(0) // top
+                                            );
+                                            var geom = bounds.toGeometry();
+                                            var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
+                                            if (area > Gmi.Settings.maxArea) {
+                                                // TODO: in km2 zou leesbaarder zijn
+                                                alert(OpenLayers.i18n('Area ${area} is too large; the maximum is ${max}', {
+                                                    max: areaWithUnit(Gmi.Settings.maxArea), 
+                                                    area: areaWithUnit(area)
+                                                }));
+                                                //return;
+                                            } else {
+                                                console.log('area', area);
+
+                                                setBox(map, bounds);
+                                                
+                                                // select region control deactiveren
+                                                b.control.box.deactivate();
+                                                map.removeControl(b.control);
+                                                b.doToggle(); // en knop uitzetten
+                                                
+                                                // automatisch make subset
+                                                Gmi.makeSubsetCorine();
+                                            }
+                                        }
+                                    });
+                                    mapPanel.map.addControl(control);
+                                } else {
+                                    // disable regio kiezen, maar laat gebied zichtbaar
+                                    b.control.box.deactivate();
+                                    map.removeControl(b.control);
+                                }
+                            },
+                            cls: 'g-actie-knop'
+                        }),/*
                         new Ext.Button({
                             text: OpenLayers.i18n('Make subset'),
                             cls: 'g-actie-knop',
