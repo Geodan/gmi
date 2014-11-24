@@ -2624,7 +2624,7 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
-                            id: 'subset-fieldset',
+                            id: 'result-fieldset',
                             title: OpenLayers.i18n('Saved terrains'),
                             defaults: {
                                 width: 'inherited'
@@ -2780,6 +2780,75 @@ Ext.onReady(function() {
                         style: 'margin: 5px'
                     },
                     items: [
+                        {
+                            xtype: 'fieldset',
+                            id: 'subset-fieldset',
+                            title: OpenLayers.i18n('Saved results'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            collapsible: true,
+                            collapsed: true,
+                            items: [
+                                //gridPanel // wfs grid panel
+                            ],
+                            listeners: {
+                                'beforeexpand': function(comp, event) {
+                                    if (comp.items.length == 0) {
+                                        var wfsGrid = Gmi.defineResultsWfsGrid();
+                                        comp.add( wfsGrid );
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            xtype: 'fieldset',
+                            title: OpenLayers.i18n('Play'),
+                            defaults: {
+                                width: 'inherited'
+                            },
+                            items: [{
+                                id: 'playtime',
+                                xtype: 'displayfield',
+                                hideLabel: true,
+                                style: {
+                                    padding: "5px",
+                                    font:"normal 20px tahoma, arial, helvetica, sans-serif"
+                                }
+                            },{
+                            xtype: 'slider',
+                            itemId: 'stepslider',
+                            //fieldLabel: '',
+                            //values: [0,0],
+                            increment: 30,
+                            minValue: 0,
+                            maxValue: 360,
+                            value: 360,
+                            name: 'stepslider',
+                            listeners: {
+                                "change":function (slider) {
+                                    //TODO: yuck, this stylemap shouldn't be defined again for every feature
+                                    var sliderval = slider.thumbs[0].value;
+                                    console.log(sliderval);
+                                    var time = new Date(Gmi.Session.datetime);
+                                    time.setMinutes(Gmi.Session.datetime.getMinutes() + sliderval);
+                                    var playtime = time.toLocaleTimeString();
+                                    Ext.getCmp('playtime').setValue(playtime);
+                                    drawResult(sliderval);
+                                    /*
+                                    //var min = slider.thumbs[0].value;
+                                    //var max = slider.thumbs[1].value;
+                                    var max = slider.thumbs[0].value;
+                                    //self.range = max - min;
+                                    self.range = 0;
+                                    self.counter = max;
+                                    self.showStep(max);
+                                    */
+                                }
+                            }
+                        }
+                            ]
+                        },
                         {
                             xtype: 'fieldset',
                             title: OpenLayers.i18n('Output'),
@@ -3283,30 +3352,12 @@ function startModelRun() {
             count: 0
         },
         on_finished: function(out_params) {
+            Gmi.invalidateResultWfsGrid();
             // toevoegen van kaartlaag met naam als model_wildfire:result_1769
             // bewaar runid als terreinid
             Gmi.Session.fireid = out_params.runid;
-            // verwijdere oude terreinen
-            var layers = map.getLayersByName('Brandverspreiding');
-            var name = 'model_wildfire:result_' + out_params.runid;
-            if (layers.length > 0) {
-                // pas huidige resultaat aan
-                layers[0].mergeNewParams({
-                    layers: name
-                });
-            } else {
-                // voeg nieuwe resultaat toe
-                var layer = new OpenLayers.Layer.WMS('Brandverspreiding', 
-                '/geoserver/wms?', {
-                    layers: name,
-                    transparent: true,
-                    format: 'image/png'
-                }, {
-                    isBaseLayer: false,
-                    opacity: 0.6
-                });
-                map.addLayer(layer);
-           }
+            showResult(mapPanel.map, out_params.runid);
+            
        },
        success: wpsSuccessCallback,
        failure: wpsFailureCallback
