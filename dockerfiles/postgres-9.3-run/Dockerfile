@@ -1,4 +1,4 @@
-FROM postgres
+FROM postgres93
 RUN service postgresql start && \
     /bin/su postgres -c "createuser -d -s -r -l docker" && \
     /bin/su postgres -c "psql postgres -c \"ALTER USER docker WITH ENCRYPTED PASSWORD 'docker'\"" && \
