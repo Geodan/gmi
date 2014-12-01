@@ -1,4 +1,0 @@
-CREATE DATABASE gls
-	OWNER gls
-	ENCODING 'UTF8'
-	TEMPLATE template_postgis;
