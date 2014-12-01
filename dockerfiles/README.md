@@ -4,7 +4,8 @@ de volgende (image) names (-t) zijn belangrijk in Dockerfiles (FROM)
   * docker build -t geoserver ./geoserver-2.6.0
   * docker build -t postgres ./postgres-9.3
   * docker build -t runpg ./postgres-9.3-run
-  * docker build -t apache
+  * docker build -t apache2 ./apache2
+  * docker build -t apache ./apache2-run
 
 images die als container (naam) gedraaid worden: 
   1. runpg (container name = postgres)
