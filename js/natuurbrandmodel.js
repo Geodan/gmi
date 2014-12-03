@@ -1779,7 +1779,7 @@ Ext.onReady(function() {
         eventListeners: {
             beforefeatureadded: function(event) {
                 // remove other features
-                event.object.removeAllFeatures();
+                //event.object.removeAllFeatures();
                 return true;
             },
             featureadded: function(event) {
@@ -1787,6 +1787,40 @@ Ext.onReady(function() {
                 console.log('featureadded', event.feature);
             },
             scope: wildfire_layer
+        }
+    });
+    
+    var stopline_layer = new OpenLayers.Layer.Vector('Stop lines', {
+        displayInLayerSwitcher: Gmi.Settings.debug, // tonen bij debug
+        styleMap: new OpenLayers.StyleMap({
+            temporary: OpenLayers.Util.applyDefaults({
+                    pointRadius: 5,
+                    strokeWidth: 3,
+                    strokeOpacity: 1,
+                    //strokeDashstyle: "dash",
+                    strokeColor: "#000000"
+                }, OpenLayers.Feature.Vector.style.temporary),
+            'default': OpenLayers.Util.applyDefaults({
+                    pointRadius: 5,
+                    strokeWidth: 3,
+                    strokeColor: '#000000'
+                }, OpenLayers.Feature.Vector.style['default']),
+            select: OpenLayers.Util.applyDefaults({
+                    pointRadius: 5,
+                    strokeWidth: 3
+                }, OpenLayers.Feature.Vector.style.select)
+        }),
+        eventListeners: {
+            beforefeatureadded: function(event) {
+                // remove other features
+                //event.object.removeAllFeatures();
+                return true;
+            },
+            featureadded: function(event) {
+                // event = type, element, feature, object (layer)
+                console.log('featureadded', event.feature);
+            },
+            scope: stopline_layer
         }
     });
     
@@ -1932,10 +1966,14 @@ Ext.onReady(function() {
         new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Path, {
             displayClass: 'olControlDrawFeaturePath',
             title: OpenLayers.i18n('Draw new fire line')
-        })/*,
+        }),/*,
         new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Polygon, {
             displayClass: 'olControlDrawFeaturePolygon'
         })*/
+        new OpenLayers.Control.DrawFeature(stopline_layer, OpenLayers.Handler.Path, {
+            displayClass: 'olControlDrawFeaturePath',
+            title: OpenLayers.i18n('Draw new stop line')
+        })
     ]);
 
     // van geoext example tree.html
@@ -2039,6 +2077,7 @@ Ext.onReady(function() {
                     }
                 }),
             wildfire_layer,
+            stopline_layer,
             new OpenLayers.Layer.Boxes('_boxes_', {
                 displayInLayerSwitcher: Gmi.Settings.debug // tonen bij debug
             })
@@ -2743,6 +2782,11 @@ Ext.onReady(function() {
                                     text: OpenLayers.i18n('Draw fire line'),
                                     handler: drawFireLine,
                                     cls: 'g-actie-knop'
+                                }),
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Draw stop line'),
+                                    handler: drawStopLine,
+                                    cls: 'g-actie-knop'
                                 })
                             ]
                         }, {
@@ -3228,7 +3272,7 @@ function windStoreAsString() {
 function drawFireLine() {
     // drawfeature knop activeren
     var map = mapPanel.map;
-
+    map.getLayersByName('Wildfire lines')[0].removeAllFeatures();
     var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
     if (toolbar.length > 0) {
         //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
@@ -3239,6 +3283,22 @@ function drawFireLine() {
         }
     }
 };
+
+function drawStopLine() {
+    // drawfeature knop activeren
+    var map = mapPanel.map;
+    map.getLayersByName('Stop lines')[0].removeAllFeatures();
+    var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
+    if (toolbar.length > 0) {
+        //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
+        var controls = toolbar[0].getControlsByClass('OpenLayers.Control.DrawFeature');
+        if (controls.length > 0) {
+            //controls[0].activate();
+            toolbar[0].activateControl(controls[1]);
+        }
+    }
+};
+
 
 function startModelRun() {
     
@@ -3259,6 +3319,26 @@ function startModelRun() {
         return;
     }
     
+    var stoplines = '';
+    var t = map.getLayersByName('Stop lines');
+    if (t.length > 0 && t[0].features.length > 0) {
+        var stopline_layer = t[0];
+        
+        stopline_layer.features.forEach(function(d){
+            var geom = d.geometry.clone();
+            for (var i = 0; i < geom.components.length; i++) {
+                geom.components[i].transform('EPSG:900913', 'EPSG:28992');
+            }
+            var wkt = geom.toString(); // rd geometry
+            stoplines += wkt;
+        });
+        console.log('stop lines', stoplines);
+    }
+    
+    
+    
+    
+    
     var t = map.getLayersByName('Wildfire lines');
     if (t.length === 0) {
         alert(OpenLayers.i18n('Interne fout: geen vectorlaag voor vuurlijnen'));
@@ -3269,11 +3349,15 @@ function startModelRun() {
         alert(OpenLayers.i18n('Draw a fire line first'));
         return;
     }
-    var geom = wildfire_layer.features[0].geometry.clone();
-    for (var i = 0; i < geom.components.length; i++) {
-        geom.components[i].transform('EPSG:900913', 'EPSG:28992');
-    }
-    var wkt = geom.toString(); // rd geometry
+    var geomarray = [];
+    wildfire_layer.features.forEach(function(d){
+        var geom = d.geometry.clone();
+        for (var i = 0; i < geom.components.length; i++) {
+            geom.components[i].transform('EPSG:900913', 'EPSG:28992');
+        }
+        geomarray.push(geom.toString());
+    });
+    var wkt = geomarray.join('!'); // rd geometry
     console.log('fire line', wkt);
     //return;
 /*    
@@ -3330,7 +3414,8 @@ function startModelRun() {
             // startmonth=05;startday=16;starthour=1508;
             startmonth: zpad(model_datetime.getMonth() + 1, 2), // 0-padded; month geeft 0..11
             startday: zpad(model_datetime.getDate(), 2), // 0-padded, laatste dag van weather/wind-string
-            starthour: hhmm // hhmm
+            starthour: hhmm, // hhmm,
+            stoplines: stoplines
         }, ';'),
         RawDataOutput: 'string',
         mimeType: 'application/json'
