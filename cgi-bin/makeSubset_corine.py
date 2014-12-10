@@ -87,7 +87,7 @@ ALTER TABLE model_wildfire.terrein_%s ADD PRIMARY KEY (gid);
 	return
 	       
 #Set postgres connection
-#conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+#conn_params = "host=postgres port=5432 dbname=research user=modeluser password=modeluser"
 conn_params = settings.conn_params
 conn = psycopg2.connect(conn_params)
 cur = conn.cursor()

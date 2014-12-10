@@ -1,7 +1,7 @@
 from geoserver.wps import process
 from com.vividsolutions.jts.geom import Geometry
 from com.ziclix.python.sql import zxJDBC
-jdbc_url = "jdbc:postgresql://192.168.40.5:3389/data_overheid"
+jdbc_url = "jdbc:postgresql://postgres:5432/data_overheid"
 username = "osm"
 password = "osm"
 driver = "org.postgresql.Driver"
