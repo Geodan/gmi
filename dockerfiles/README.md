@@ -21,10 +21,22 @@ de drie scripts
   3. dstart.sh 
 gebruiken de container names die gecreeerd worden bij het aanmaken ervan in de verschilende docker run opdrachten
   
-  voorbeeld: rebuild apache: ./rapa.sh
-
+  1. drun-1-p.sh
+  2. drun-2-p-g.sh
+  3. drun-3-g-a.sh
 
 met dstart.sh kunnen de drie containers gestart worden, als ze met docker stop gestopt waren
+
+herstarten webservices
+
+	./drerunga.sh
+
+docker (re-)build scripting (eerst stop en rm)
+
+  voorbeeld: rebuild apache: ./rapa.sh
+  voorbeeld: rebuild postgres: ./rpo93.sh ./rpo.sh
+  voorbeeld: rebuild geoserver: ./rgeo.sh
+
 
 stop container:  docker stop &lt;container-name>
 
