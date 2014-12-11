@@ -1405,6 +1405,7 @@ var weathersettingsWindow = new Ext.Window({
         //height: '50%'
     },
     items: [
+    	
         new Ext.form.ComboBox({
             id: 'weatherstation2',
             fieldLabel: OpenLayers.i18n('Weather station'),
@@ -1414,6 +1415,7 @@ var weathersettingsWindow = new Ext.Window({
             lazyRender: true,
             anchor: '100%',
             //align: 'right',
+            hidden: true, //TT: disables because not in contract
             region: 'north',
             mode: 'local',
             value: Gmi.Settings.weatherDefaults.station, // default: Deelen
@@ -1722,6 +1724,7 @@ Ext.onReady(function() {
             showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
 
             // tijd van neerslagradar
+            /* TT: Neerslagrader uitgechakeld, niet in overeenkomst
             var map = row.data.feature.layer.map;
             var layers = map.getLayersByName(OpenLayers.i18n('KNMI Neerslagradar'));
             if (layers.length > 0) {
@@ -1729,7 +1732,7 @@ Ext.onReady(function() {
                 console.log('tijd afgerond voor neerslagradar', time);
                 var layer = layers[0];
                 layer.mergeNewParams({time: time.toISOString()});
-            }
+            }*/
         }, gridPanel);
 
         // create a panel and add the map panel and grid panel
@@ -2062,6 +2065,7 @@ Ext.onReady(function() {
                     //maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),
+            /* TT: Neerslagrader uitgeschakeld, niet in contract
             new OpenLayers.Layer.WMS(OpenLayers.i18n('KNMI Neerslagradar'), 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?', {
                     layers: 'RADNL_OPER_R___25PCPRR_L3_COLOR',
                     transparent: true,
@@ -2076,6 +2080,7 @@ Ext.onReady(function() {
                         url: 'img/NeerslagradarLegend.png'
                     }
                 }),
+                */
             wildfire_layer,
             stopline_layer,
             new OpenLayers.Layer.Boxes('_boxes_', {
@@ -2719,6 +2724,7 @@ Ext.onReady(function() {
                                 width: 'inherited'
                             },
                             items: [
+                            	 
                                 new Ext.form.ComboBox({
                                     id: 'weatherstation',
                                     fieldLabel: OpenLayers.i18n('Weather station'),
@@ -2729,6 +2735,7 @@ Ext.onReady(function() {
                                     anchor: '100%',
                                     align: 'right',
                                     mode: 'local',
+                                    hidden: true,//TT: disabled because not in contract
                                     value: Gmi.Settings.weatherDefaults.station, // default: Deelen
                                     forceSelection: true, editable: false,
                                     store: new Ext.data.ArrayStore({
