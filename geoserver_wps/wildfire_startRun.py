@@ -1,7 +1,7 @@
 from geoserver.wps import process
 
 from com.ziclix.python.sql import zxJDBC
-jdbc_url = "jdbc:postgresql://192.168.40.5:3389/research"
+jdbc_url = "jdbc:postgresql://postgres:5432/research"
 username = "modeluser"
 password = "modeluser"
 driver = "org.postgresql.Driver"

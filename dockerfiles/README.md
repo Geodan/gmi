@@ -1,3 +1,24 @@
+* Voorbereiding:
+
+Alle data downloaden van cumulus, nimbus, git, titania (ahn/raster5)
+
+m.n.
+
+  1. geoserverdata
+  2. ahn files
+  3. https://github.com/Geodan/gmi/
+
+gebruik bv. scp -rp geodan@192.168.40.8:/var/data/geoserverdata ~/data/geoserverdata
+
+	./prepare.sh
+		dit haalt het project van git en doet zoek en vervang van configuratie files
+	./prepare_geoserver.sh
+		plaatst files met configuratie data in ~/geoserver en ~/data/geoserverdata
+
+* Docker
+
+In de docker directories bevinden zich files die naar de -v volumes worden gekopieerd
+
 de volgende (image) names (-t) zijn belangrijk in Dockerfiles (FROM) 
 
   * docker build -t tomcat ./tomcat7
@@ -8,7 +29,7 @@ de volgende (image) names (-t) zijn belangrijk in Dockerfiles (FROM)
   * docker build -t apache ./apache2-run
 
 images die als container (naam) gedraaid worden: 
-  1. runpg (container name = postgres)
+  1. postgres (container name = postgres)
   2. geoserver (container name = geoserver) 
   3. apache (container name = apache)
 
@@ -18,13 +39,23 @@ Verwijder een bestaand image alvorens het opnieuw te builden
 de drie scripts 
   1. drun.sh 
   2. dstop.sh 
-  3. dstart.sh 
+  3. dstart.sh
+ 
 gebruiken de container names die gecreeerd worden bij het aanmaken ervan in de verschilende docker run opdrachten
-  
-  voorbeeld: rebuild apache: ./rapa.sh
+  1. drun-1-p.sh
+  2. drun-2-p-g.sh
+  3. drun-3-g-a.sh
 
+herstarten webservices
 
-met dstart.sh kunnen de drie containers gestart worden, als ze met docker stop gestopt waren
+	./drerunga.sh
+
+docker (re-)build scripting (eerst stop en rm)
+
+	voorbeeld: rebuild apache: ./rapa.sh
+	voorbeeld: rebuild postgres: ./rpo93.sh ./rpo.sh
+	voorbeeld: rebuild geoserver: ./rgeo.sh
+
 
 stop container:  docker stop &lt;container-name>
 

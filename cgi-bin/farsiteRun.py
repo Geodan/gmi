@@ -217,8 +217,8 @@ class farsiteRun():
 			self.updateStatus(runid, "error", 20, "Error in farsite")
 			return
 		self.updateStatus(runid, "running", 20, "Exporteren uitvoer")
-		pgserver_host = settings.pgserver_host #'192.168.40.5'
-		pgserver_port = settings.pgserver_port #'3389'
+		pgserver_host = settings.pgserver_host #'postgres'
+		pgserver_port = settings.pgserver_port #'5432'
 		pgserver_user = settings.pgserver_user #'modeluser'
 		callstring = 'ogr2ogr -f "PostgreSQL" PG:"host='+pgserver_host+' port='+pgserver_port+' user=modeluser dbname=research password=modeluser" -nln result_'+str(runid)+' -lco schema=model_wildfire -lco OVERWRITE=YES '+str(outdir)+'/results.shp'
 		subprocess.call(callstring, shell=True)	
@@ -259,7 +259,7 @@ class farsiteRun():
 	
 	def start(self):
 		#Set postgres connection
-		#conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+		#conn_params = "host=postgres port=5432 dbname=research user=modeluser password=modeluser"
 		conn_params = settings.conn_params
 		conn = psycopg2.connect(conn_params)
 		cur = conn.cursor()
