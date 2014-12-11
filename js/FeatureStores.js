@@ -236,12 +236,14 @@ Gmi.defineResultsWfsGrid = function() {
     gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
         console.log('rowselect', row.data.feature);
         
-        var geom = row.data.feature.geometry;
-        var center = geom.getCentroid();
-        var bounds = geom.getBounds();
-
-        // zetten van box
-        setBox(mapPanel.map, bounds);
+         
+        
+        //var geom = row.data.feature.geometry;
+        //var center = geom.getCentroid();
+        //var bounds = geom.getBounds();
+        //
+        //// zetten van box
+        //setBox(mapPanel.map, bounds);
         
         //Set the model-time as start time
         var month = row.data.feature.attributes['startmonth'];
@@ -255,24 +257,33 @@ Gmi.defineResultsWfsGrid = function() {
         // pan to extent
         //mapPanel.map.panTo(new OpenLayers.LonLat(center.x, center.y));
         // zoom naar extent
-        var zoom = mapPanel.map.getZoomForExtent(bounds);
-        if (zoom > Gmi.Settings.maxZoomOnMoveToTerrain) {
-            zoom = Gmi.Settings.maxZoomOnMoveToTerrain;
-        }
+        //var zoom = mapPanel.map.getZoomForExtent(bounds);
+        //if (zoom > Gmi.Settings.maxZoomOnMoveToTerrain) {
+        //    zoom = Gmi.Settings.maxZoomOnMoveToTerrain;
+        //}
         //mapPanel.map.zoomToExtent(bounds);
-        mapPanel.map.moveTo(new OpenLayers.LonLat(center.x, center.y), zoom);
+        //mapPanel.map.moveTo(new OpenLayers.LonLat(center.x, center.y), zoom);
         
         // zetten van fuelmodel_name
-        Ext.getCmp('fuelmodel_name').setValue(row.data.feature.attributes['landscape_name']);
+        //Ext.getCmp('fuelmodel_name').setValue(row.data.feature.attributes['landscape_name']);
         // zetten van fuelid
-        Gmi.Session.fuelid = row.data.feature.attributes['landscape_id'];
+        //Gmi.Session.fuelid = row.data.feature.attributes['landscape_id'];
         
         // zetten van model_date en model_time
         setModelDateTime(datetime);
 
         // terrein laag (landscape_id) zetten? makkelijker bij testen
-        showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
+        //showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
         showResult(mapPanel.map, row.data.feature.attributes['run_id']);
+        var index = -1;
+        //Someday someone will chop my hands off for this code.....
+        Gmi.Session.terraingrid.store.data.items.forEach(function(d,i){ 
+        	if (d.data.feature.attributes.terrein_id == row.data.feature.attributes['terrein_id']){
+        		Gmi.Session.terraingrid.selModel.selectRow(i);
+        	}
+        });
+        
+        
         /*
         // tijd van neerslagradar
         var map = row.data.feature.layer.map;

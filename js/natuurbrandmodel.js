@@ -2677,6 +2677,7 @@ Ext.onReady(function() {
                                 'beforeexpand': function(comp, event) {
                                     if (comp.items.length == 0) {
                                         var wfsGrid = Gmi.defineTerrainWfsGrid();
+                                        Gmi.Session.terraingrid = wfsGrid;
                                         comp.add( wfsGrid );
                                     }
                                 }
@@ -2787,6 +2788,11 @@ Ext.onReady(function() {
                                     text: OpenLayers.i18n('Draw stop line'),
                                     handler: drawStopLine,
                                     cls: 'g-actie-knop'
+                                }),
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Copy fire extent'),
+                                    handler: copyFireLine,
+                                    cls: 'g-actie-knop'
                                 })
                             ]
                         }, {
@@ -2874,6 +2880,7 @@ Ext.onReady(function() {
                                     //TODO: yuck, this stylemap shouldn't be defined again for every feature
                                     var sliderval = slider.thumbs[0].value;
                                     console.log(sliderval);
+                                    Gmi.Session.sliderval = sliderval;
                                     var time = new Date(Gmi.Session.datetime);
                                     time.setMinutes(Gmi.Session.datetime.getMinutes() + sliderval);
                                     var playtime = time.toLocaleTimeString();
@@ -3297,6 +3304,25 @@ function drawStopLine() {
             toolbar[0].activateControl(controls[1]);
         }
     }
+};
+
+function copyFireLine() {
+	//Copies the currently available model result at the specified time
+	//TODO: check for valid sliderval and result input
+	drawFireLine(); 
+	var map = mapPanel.map;
+    var sliderval = Gmi.Session.sliderval;
+	var layer = map.getLayersByName('Brandverspreiding')[0];
+    var drawlayer = map.getLayersByName('Wildfire lines')[0];
+
+	layer.features.forEach(function(d){
+		var elaps = parseInt(d.attributes.elapsed_mi);
+		if (elaps == sliderval) {
+			d.style = null;
+			drawlayer.features.push(d);
+		}
+	});
+    drawlayer.redraw();
 };
 
 

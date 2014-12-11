@@ -200,7 +200,7 @@ class farsiteRun():
 		#curlstring = 'curl -G -d "id='+str(runid)+'&coords=' + point + '&template='+template+'&weather='+ weatherString +'&wind=' + windString + '&day='+startDay+'&month='+startMonth+'&hour='+startHour+'&min=00&interval=1&duration=6" ' + url
 
 		callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
-		killstring = "sleep 30 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
+		killstring = "sleep 120 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
 		
 		
 		try:
