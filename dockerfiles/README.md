@@ -53,6 +53,8 @@ gebruiken de container names die gecreeerd worden bij het aanmaken ervan in de v
 
 utility
 
+	docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
+
 	docker-enter &lt;container-name> 
 
 herstarten webservices
