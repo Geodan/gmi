@@ -1,1 +1,1 @@
-docker run -d -p 8080:8080 --name geoserver -v ~/geoserver:/var/lib/tomcat7/webapps/geoserver -v ~/git/gmi/dockerfiles/logs:/var/lib/tomcat7/logs -v ~/data/geoserverdata:/var/data/geoserverdata --link postgres:postgres geoserver
+docker run -d -p 8080:8080 --name geoserver -v ~/geoserver:/var/lib/tomcat7/webapps/geoserver -v ~/git/gmi/dockerfiles/logs:/var/lib/tomcat7/logs -v ~/data/geoserverdata:/var/data/geoserverdata --link postgres:postgres  geoserver

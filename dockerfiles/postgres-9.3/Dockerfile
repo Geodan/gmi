@@ -18,5 +18,6 @@ RUN wget --quiet --no-check-certificate -O - https://www.postgresql.org/media/ke
 RUN echo "host    all   all     192.168.0.0/16               md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
     echo "host    all   all     172.17.0.0/16               md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
     echo "listen_addresses = '*'" >> /etc/postgresql/9.3/main/postgresql.conf && \
-    echo "port = 5432" >> /etc/postgresql/9.3/main/postgresql.conf 
-
+    echo "port = 5432" >> /etc/postgresql/9.3/main/postgresql.conf && \
+    echo "POSTGIS_ENABLE_OUTDB_RASTERS=1" >> /etc/postgresql/9.3/main/environment && \
+    echo "POSTGIS_GDAL_ENABLED_DRIVERS=ENABLE_ALL" >>  /etc/postgresql/9.3/main/environment

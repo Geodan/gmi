@@ -21,6 +21,7 @@ In de docker directories bevinden zich files die naar de -v volumes worden gekop
 
 de volgende (image) names (-t) zijn belangrijk in Dockerfiles (FROM) 
 
+  * docker build -t web-base ./natuurbrand-web-base
   * docker build -t tomcat ./tomcat7
   * docker build -t geoserver ./geoserver-2.6.0
   * docker build -t postgres93 ./postgres-9.3
@@ -45,6 +46,10 @@ gebruiken de container names die gecreeerd worden bij het aanmaken ervan in de v
   1. drun-1-p.sh
   2. drun-2-p-g.sh
   3. drun-3-g-a.sh
+
+utility
+
+	docker-enter &lt;container-name> 
 
 herstarten webservices
 

@@ -7,4 +7,8 @@ date > /date.txt
 mkdir -p  /var/www/main/gmi/externals/GeoExt
 git clone https://github.com/geoext/geoext /var/www/main/gmi/externals/GeoExt
 fi
+mkdir -p  /var/data/wildfire/fires
+mkdir -p  /var/data/wildfire/fuelmodels
+chown www-data /var/data/wildfire/fires
+chown www-data /var/data/wildfire/fuelmodels
 /usr/sbin/apachectl -DFOREGROUND

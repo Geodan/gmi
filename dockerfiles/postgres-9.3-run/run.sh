@@ -61,9 +61,9 @@ else
     
 
     echo "Creating research database using template_postgis" >> out
-    sudo -u postgres psql -c 'GRANT ALL PRIVILEGES TO modeluser;'
-    sudo -u postgres psql -c 'GRANT modeluser TO tomt;'
     sudo -u postgres createdb -T template_postgis -O modeluser research
+    sudo -u postgres psql -c 'GRANT ALL PRIVILEGES ON DATABASE research TO modeluser;'
+    sudo -u postgres psql -c 'GRANT modeluser TO tomt;'
 #    echo "Executing DDL scripts"    
 #    psql -U docker -d research -h localhost -f /ddl/administration.sql 
 #    psql -U docker -d research -h localhost -f /ddl/create_schemas.sql 
