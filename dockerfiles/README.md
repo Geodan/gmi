@@ -1,4 +1,5 @@
-* Voorbereiding:
+Voorbereiding:
+=============
 
 Alle data downloaden van cumulus, nimbus, git, titania (ahn/raster5)
 
@@ -7,6 +8,7 @@ m.n.
   1. geoserverdata
   2. ahn files
   3. https://github.com/Geodan/gmi/
+  4. zie ./dockerfiles/posgres-9.3-run/ddldump.sh om data te halen
 
 gebruik bv. scp -rp geodan@192.168.40.8:/var/data/geoserverdata ~/data/geoserverdata
 
@@ -15,7 +17,9 @@ gebruik bv. scp -rp geodan@192.168.40.8:/var/data/geoserverdata ~/data/geoserver
 	./prepare_geoserver.sh
 		plaatst files met configuratie data in ~/geoserver en ~/data/geoserverdata
 
-* Docker
+
+Docker
+======
 
 In de docker directories bevinden zich files die naar de -v volumes worden gekopieerd
 
