@@ -18,14 +18,15 @@ driver = "org.postgresql.Driver"
 	'weatherstring': (str, 'weatherstring'),
 	'startmonth': (int, 'Starting month [1-12]'),
 	'startday': (int, 'starting day of month [1-7]'), 
-	'starthour': (int, 'start time of fire [eg: 1400]')
+	'starthour': (int, 'start time of fire [eg: 1400]'),
+	'stoplines': (str, 'WKT geom of stoplines')
   },
   outputs={
   	'string': (str,'JSON string')
   }
 )
 
-def run(userid,geom, name, fuelmodel, weatherstring, windstring, startmonth, startday, starthour):
+def run(userid,geom, name, fuelmodel, weatherstring, windstring, startmonth, startday, starthour, stoplines):
 	#Connect to postgres
 	conn = zxJDBC.connect(jdbc_url,username, password, driver)
 	cur = conn.cursor()
@@ -43,11 +44,11 @@ def run(userid,geom, name, fuelmodel, weatherstring, windstring, startmonth, sta
 	cur = conn.cursor()
 	query = """
 		INSERT INTO administration.params_farsiterun 
-		(run, name, fuelmodel, point, weatherstring, windstring, startmonth, startday, starthour)
+		(run, name, fuelmodel, point, weatherstring, windstring, startmonth, startday, starthour, stoplines)
 		VALUES
-		(?,?,?,?,?,?,?,?,?);
+		(?,?,?,?,?,?,?,?,?,?);
 	"""
-	data = [runid,name,fuelmodel,geom,weatherstring,windstring,startmonth,startday,starthour]
+	data = [runid,name,fuelmodel,geom,weatherstring,windstring,startmonth,startday,starthour, stoplines]
 	cur.execute(query, data )
 	conn.commit()
 	

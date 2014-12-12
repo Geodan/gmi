@@ -1405,6 +1405,7 @@ var weathersettingsWindow = new Ext.Window({
         //height: '50%'
     },
     items: [
+    	
         new Ext.form.ComboBox({
             id: 'weatherstation2',
             fieldLabel: OpenLayers.i18n('Weather station'),
@@ -1414,6 +1415,7 @@ var weathersettingsWindow = new Ext.Window({
             lazyRender: true,
             anchor: '100%',
             //align: 'right',
+            hidden: true, //TT: disables because not in contract
             region: 'north',
             mode: 'local',
             value: Gmi.Settings.weatherDefaults.station, // default: Deelen
@@ -1722,6 +1724,7 @@ Ext.onReady(function() {
             showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
 
             // tijd van neerslagradar
+            /* TT: Neerslagrader uitgechakeld, niet in overeenkomst
             var map = row.data.feature.layer.map;
             var layers = map.getLayersByName(OpenLayers.i18n('KNMI Neerslagradar'));
             if (layers.length > 0) {
@@ -1729,7 +1732,7 @@ Ext.onReady(function() {
                 console.log('tijd afgerond voor neerslagradar', time);
                 var layer = layers[0];
                 layer.mergeNewParams({time: time.toISOString()});
-            }
+            }*/
         }, gridPanel);
 
         // create a panel and add the map panel and grid panel
@@ -1779,7 +1782,7 @@ Ext.onReady(function() {
         eventListeners: {
             beforefeatureadded: function(event) {
                 // remove other features
-                event.object.removeAllFeatures();
+                //event.object.removeAllFeatures();
                 return true;
             },
             featureadded: function(event) {
@@ -1787,6 +1790,40 @@ Ext.onReady(function() {
                 console.log('featureadded', event.feature);
             },
             scope: wildfire_layer
+        }
+    });
+    
+    var stopline_layer = new OpenLayers.Layer.Vector('Stop lines', {
+        displayInLayerSwitcher: Gmi.Settings.debug, // tonen bij debug
+        styleMap: new OpenLayers.StyleMap({
+            temporary: OpenLayers.Util.applyDefaults({
+                    pointRadius: 5,
+                    strokeWidth: 3,
+                    strokeOpacity: 1,
+                    //strokeDashstyle: "dash",
+                    strokeColor: "#000000"
+                }, OpenLayers.Feature.Vector.style.temporary),
+            'default': OpenLayers.Util.applyDefaults({
+                    pointRadius: 5,
+                    strokeWidth: 3,
+                    strokeColor: '#000000'
+                }, OpenLayers.Feature.Vector.style['default']),
+            select: OpenLayers.Util.applyDefaults({
+                    pointRadius: 5,
+                    strokeWidth: 3
+                }, OpenLayers.Feature.Vector.style.select)
+        }),
+        eventListeners: {
+            beforefeatureadded: function(event) {
+                // remove other features
+                //event.object.removeAllFeatures();
+                return true;
+            },
+            featureadded: function(event) {
+                // event = type, element, feature, object (layer)
+                console.log('featureadded', event.feature);
+            },
+            scope: stopline_layer
         }
     });
     
@@ -1932,10 +1969,14 @@ Ext.onReady(function() {
         new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Path, {
             displayClass: 'olControlDrawFeaturePath',
             title: OpenLayers.i18n('Draw new fire line')
-        })/*,
+        }),/*,
         new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Polygon, {
             displayClass: 'olControlDrawFeaturePolygon'
         })*/
+        new OpenLayers.Control.DrawFeature(stopline_layer, OpenLayers.Handler.Path, {
+            displayClass: 'olControlDrawFeaturePath',
+            title: OpenLayers.i18n('Draw new stop line')
+        })
     ]);
 
     // van geoext example tree.html
@@ -2024,6 +2065,7 @@ Ext.onReady(function() {
                     //maxExtent: OpenLayers.Bounds.fromString('361124.418941,6573545.115699,806881.242096,7095449.313188'),
                     transitionEffect: 'resize'
                 }),
+            /* TT: Neerslagrader uitgeschakeld, niet in contract
             new OpenLayers.Layer.WMS(OpenLayers.i18n('KNMI Neerslagradar'), 'http://geoservices.knmi.nl/cgi-bin/RADNL_OPER_R___25PCPRR_L3.cgi?', {
                     layers: 'RADNL_OPER_R___25PCPRR_L3_COLOR',
                     transparent: true,
@@ -2038,7 +2080,9 @@ Ext.onReady(function() {
                         url: 'img/NeerslagradarLegend.png'
                     }
                 }),
+                */
             wildfire_layer,
+            stopline_layer,
             new OpenLayers.Layer.Boxes('_boxes_', {
                 displayInLayerSwitcher: Gmi.Settings.debug // tonen bij debug
             })
@@ -2638,6 +2682,7 @@ Ext.onReady(function() {
                                 'beforeexpand': function(comp, event) {
                                     if (comp.items.length == 0) {
                                         var wfsGrid = Gmi.defineTerrainWfsGrid();
+                                        Gmi.Session.terraingrid = wfsGrid;
                                         comp.add( wfsGrid );
                                     }
                                 }
@@ -2679,6 +2724,7 @@ Ext.onReady(function() {
                                 width: 'inherited'
                             },
                             items: [
+                            	 
                                 new Ext.form.ComboBox({
                                     id: 'weatherstation',
                                     fieldLabel: OpenLayers.i18n('Weather station'),
@@ -2689,6 +2735,7 @@ Ext.onReady(function() {
                                     anchor: '100%',
                                     align: 'right',
                                     mode: 'local',
+                                    hidden: true,//TT: disabled because not in contract
                                     value: Gmi.Settings.weatherDefaults.station, // default: Deelen
                                     forceSelection: true, editable: false,
                                     store: new Ext.data.ArrayStore({
@@ -2742,6 +2789,16 @@ Ext.onReady(function() {
                                 new Ext.Button({
                                     text: OpenLayers.i18n('Draw fire line'),
                                     handler: drawFireLine,
+                                    cls: 'g-actie-knop'
+                                }),
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Draw stop line'),
+                                    handler: drawStopLine,
+                                    cls: 'g-actie-knop'
+                                }),
+                                new Ext.Button({
+                                    text: OpenLayers.i18n('Copy fire extent'),
+                                    handler: copyFireLine,
                                     cls: 'g-actie-knop'
                                 })
                             ]
@@ -2830,6 +2887,7 @@ Ext.onReady(function() {
                                     //TODO: yuck, this stylemap shouldn't be defined again for every feature
                                     var sliderval = slider.thumbs[0].value;
                                     console.log(sliderval);
+                                    Gmi.Session.sliderval = sliderval;
                                     var time = new Date(Gmi.Session.datetime);
                                     time.setMinutes(Gmi.Session.datetime.getMinutes() + sliderval);
                                     var playtime = time.toLocaleTimeString();
@@ -3228,7 +3286,7 @@ function windStoreAsString() {
 function drawFireLine() {
     // drawfeature knop activeren
     var map = mapPanel.map;
-
+    map.getLayersByName('Wildfire lines')[0].removeAllFeatures();
     var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
     if (toolbar.length > 0) {
         //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
@@ -3239,6 +3297,41 @@ function drawFireLine() {
         }
     }
 };
+
+function drawStopLine() {
+    // drawfeature knop activeren
+    var map = mapPanel.map;
+    map.getLayersByName('Stop lines')[0].removeAllFeatures();
+    var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
+    if (toolbar.length > 0) {
+        //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
+        var controls = toolbar[0].getControlsByClass('OpenLayers.Control.DrawFeature');
+        if (controls.length > 0) {
+            //controls[0].activate();
+            toolbar[0].activateControl(controls[1]);
+        }
+    }
+};
+
+function copyFireLine() {
+	//Copies the currently available model result at the specified time
+	//TODO: check for valid sliderval and result input
+	drawFireLine(); 
+	var map = mapPanel.map;
+    var sliderval = Gmi.Session.sliderval;
+	var layer = map.getLayersByName('Brandverspreiding')[0];
+    var drawlayer = map.getLayersByName('Wildfire lines')[0];
+
+	layer.features.forEach(function(d){
+		var elaps = parseInt(d.attributes.elapsed_mi);
+		if (elaps == sliderval) {
+			d.style = null;
+			drawlayer.features.push(d);
+		}
+	});
+    drawlayer.redraw();
+};
+
 
 function startModelRun() {
     
@@ -3259,6 +3352,26 @@ function startModelRun() {
         return;
     }
     
+    var stoplines = '';
+    var t = map.getLayersByName('Stop lines');
+    if (t.length > 0 && t[0].features.length > 0) {
+        var stopline_layer = t[0];
+        
+        stopline_layer.features.forEach(function(d){
+            var geom = d.geometry.clone();
+            for (var i = 0; i < geom.components.length; i++) {
+                geom.components[i].transform('EPSG:900913', 'EPSG:28992');
+            }
+            var wkt = geom.toString(); // rd geometry
+            stoplines += wkt;
+        });
+        console.log('stop lines', stoplines);
+    }
+    
+    
+    
+    
+    
     var t = map.getLayersByName('Wildfire lines');
     if (t.length === 0) {
         alert(OpenLayers.i18n('Interne fout: geen vectorlaag voor vuurlijnen'));
@@ -3269,11 +3382,15 @@ function startModelRun() {
         alert(OpenLayers.i18n('Draw a fire line first'));
         return;
     }
-    var geom = wildfire_layer.features[0].geometry.clone();
-    for (var i = 0; i < geom.components.length; i++) {
-        geom.components[i].transform('EPSG:900913', 'EPSG:28992');
-    }
-    var wkt = geom.toString(); // rd geometry
+    var geomarray = [];
+    wildfire_layer.features.forEach(function(d){
+        var geom = d.geometry.clone();
+        for (var i = 0; i < geom.components.length; i++) {
+            geom.components[i].transform('EPSG:900913', 'EPSG:28992');
+        }
+        geomarray.push(geom.toString());
+    });
+    var wkt = geomarray.join('!'); // rd geometry
     console.log('fire line', wkt);
     //return;
 /*    
@@ -3330,7 +3447,8 @@ function startModelRun() {
             // startmonth=05;startday=16;starthour=1508;
             startmonth: zpad(model_datetime.getMonth() + 1, 2), // 0-padded; month geeft 0..11
             startday: zpad(model_datetime.getDate(), 2), // 0-padded, laatste dag van weather/wind-string
-            starthour: hhmm // hhmm
+            starthour: hhmm, // hhmm,
+            stoplines: stoplines
         }, ';'),
         RawDataOutput: 'string',
         mimeType: 'application/json'

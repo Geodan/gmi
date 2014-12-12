@@ -36,7 +36,7 @@ class farsiteRun():
 		if not os.path.exists(outdir):
 			os.makedirs(outdir)
 		os.chdir(outdir) #Go into output directory
-		query = "SELECT point, weatherstring, windstring, startmonth, startday, starthour, fuelmodel, name FROM administration.params_farsiterun WHERE run = %s;"
+		query = "SELECT point, weatherstring, windstring, startmonth, startday, starthour, fuelmodel, name, stoplines FROM administration.params_farsiterun WHERE run = %s;"
 		data = (runid, )
 		cur.execute(query, data )
 		res = cur.fetchone()
@@ -49,6 +49,7 @@ class farsiteRun():
 		startMin   = str(0).zfill(2)
 		fuelmodel  = str(res[6])
 		name 	   = str(res[7])
+		wktStopline =str(res[8])
 		endMonth   = startMonth
 		endDay     = startDay
 		endHour    = str(int(startHour) + 600).zfill(4)
@@ -86,20 +87,48 @@ class farsiteRun():
 		vectorfile = '%s/ignition.VCT' % outdir
 		f = open(vectorfile, 'w')
 		vcttype = 'unknown'
+		
+		stringarray = wktString.split('!')
+		for string in stringarray:
+		    # * FIND GEOM TYPE
+		    if (string.find('POINT') > -1):
+		        vcttype = 'point'
+		        f.write('601\n')
+		    elif (string.find('LINESTRING') > -1):
+		        vcttype = 'line'
+		        f.write('1\n')
+		    geomArr = string.replace('POINT(','').replace('LINESTRING(','').replace(')','').split(',')
+		    for coordinate in geomArr:
+		        numbers = coordinate.split(' ')
+		        for number in numbers:
+		            f.write(str(int(round(float(number),0))) + ' ')
+		        f.write('\n')
+		    f.write('END\n')
+		f.write('END') #Why 2 times??
+		f.close()
+		
+		vectorfile = '%s/barriers.BAR' % outdir
+		f = open(vectorfile, 'w')
+		vcttype = 'unknown'
+		barrier = False
 		# * FIND GEOM TYPE
-		if (wktString.find('POINT') > -1):
-			vcttype = 'point'
-			f.write('601\n')
-		elif (wktString.find('LINESTRING') > -1):
-			vcttype = 'line'
-			f.write('1\n')
-		geomArr = wktString.replace('POINT(','').replace('LINESTRING(','').replace(')','').split(',')
-		for coordinate in geomArr:
-			numbers = coordinate.split(' ')
-			for number in numbers:
-				f.write(str(int(round(float(number),0))) + ' ')
-			f.write('\n')
-		f.write('END\n')
+		for string in stringarray:
+		    if (string.find('POINT') > -1):
+		    	vcttype = 'point'
+		    	f.write('601\n')
+		    	barrier = True
+		    elif (string.find('LINESTRING') > -1):
+		    	vcttype = 'line'
+		    	f.write('1\n')
+		    	barrier = True
+		    if (barrier == True):
+		        geomArr = string.replace('POINT(','').replace('LINESTRING(','').replace(')','').split(',')
+		        for coordinate in geomArr:
+		            numbers = coordinate.split(' ')
+		            for number in numbers:
+		                f.write(str(int(round(float(number),0))) + ' ')
+		            f.write('\n')
+		        f.write('END\n')
 		f.write('END') #Why 2 times??
 		f.close()
 		
@@ -143,6 +172,8 @@ class farsiteRun():
 			endMin = %(endMin)s
 			ignitionFile = %(outdir)s/ignition.VCT
 			ignitionFileType = %(vcttype)s
+			barrierFile = %(outdir)s/barrier.BAR
+			barrierFileType = %(vcttype)s
 			# point or line
 			vectMake = false
 			# Therefore we don't need the vectorFilename property
@@ -169,7 +200,7 @@ class farsiteRun():
 		#curlstring = 'curl -G -d "id='+str(runid)+'&coords=' + point + '&template='+template+'&weather='+ weatherString +'&wind=' + windString + '&day='+startDay+'&month='+startMonth+'&hour='+startHour+'&min=00&interval=1&duration=6" ' + url
 
 		callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
-		killstring = "sleep 30 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
+		killstring = "sleep 120 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
 		
 		
 		try:
