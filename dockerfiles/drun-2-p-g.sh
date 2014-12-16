@@ -1,1 +1,1 @@
-docker run -d -p 8080:8080 --name geoserver -v ~/geoserver:/var/lib/tomcat7/webapps/geoserver -v ~/data/log:/var/log -v ~/data/geoserverdata:/var/data/geoserverdata --link postgres:postgres --add-host="virtualhost:$(ip addr show eth0 | awk '/ inet / {split($2,arr,"/");print arr[1]}')" geoserver
+docker run -d -p 8080:8080 --name geoserver -v ~/geoserver:/var/lib/tomcat7/webapps/geoserver -v ~/data/geoserverdata:/var/data/geoserverdata --link postgres:postgres --add-host="virtualhost:$(ip addr show eth0 | awk '/ inet / {split($2,arr,"/");print arr[1]}')" geoserver
