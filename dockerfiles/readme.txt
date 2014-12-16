@@ -94,11 +94,13 @@ Er zijn 2 databronnen
 	de administration, model_wildfire, top10nl, dems.
 	de dems wordt met raster2psql gevuld
 	in ./dockerfiles/postgres-9.3-run/ddl bevindt zich een dump script, bedoeld om de gegevens en de schema definities op te halen.
-ad 1. De geoserver data directory kan buiten de webserver worden gehouden als complete directory structuur. Deze is ongeveer 800 Mb, en bevat onder meer de terrein web-cache.
 
+ad 1. De geoserver data directory kan buiten de webserver worden gehouden als complete directory structuur. Deze is ongeveer 800 Mb, en bevat onder meer de terrein web-cache.
 ad 2. De postgis database heeft behalve tabellen die de parameters voor het rekenmodel bewaren, met name een ahn1 tabel met rasters (dems.ahn1).
-Deze rasters worden ingelezen mbt. een postgis tool. De files moeten voor de database zichtbaar blijven, na inlezen kan de ahn bron niet verplaatst worden.
+
+De rasters worden ingelezen mbt. een postgis tool. De files moeten voor de database zichtbaar blijven, na inlezen kan de ahn bron niet verplaatst worden.
 De ahn bevat 6.2Gb aan tiff files. De postgres database is 12Gb, incl. ahn1 en top10nl (top10nl.sql is 13Gb).
+
 
 De data kan worden opgeschoond, door resultaat features te verwijderen zijnde de geoserver objecten en de bijbehorende tabelen op postgres.
 De params_ tabellen in administration kunnen worden leeggemaakt (truncate)
@@ -108,9 +110,9 @@ Kopieren van data
 -----------------
 
 	$ git clone https://github.com/Geodan/gmi
-	$ scp geodan@192.168.40.5:/var/data/geoserverdata ~/data/geoserverdata
-	$ scp geodan@192.168.24.15:/var/data/geodata/ahn1/raster5  ~/data/ahn/raster5
-
+	$ scp -rp geodan@192.168.40.5:/var/data/geoserverdata ~/data/geoserverdata
+	$ scp -rp geodan@192.168.24.15:/var/data/geodata/ahn1/raster5  ~/data/ahn/raster5
+	
 
 Het inlezen van de ddl en gebruik van raster2psql
 -------------------------------------------------
@@ -242,23 +244,73 @@ Voor het opnieuw maken zie rpo.sh en rpo93.sh, rapa.sh en rapa2.sh, rgeo.sh
 Images runnen
 =============
 
-Sommige images worden gerund als daemon met daarin een service op een poort (EXPOSE).
-In het image moet een service draaien, en die moet blijven draaien, dus niet zelf als service, maar als FORGROUND process in de container.
-Het fine tunen van het opstartproces wordt vaak geregeld in een shell script, dat als ENTRYPOINT wordt gebruikt na docker start.
+Voordat er gerund kan worden aandacht voor de volgende voorbereidingen:
+
+postgres
+--------
+Voor postgres moeten de container subnetmasks worden toegevoegd aan pg_hba.conf. Dit gebeurt in de base image postgres93. 
+De database wordt buiten de container gedirigeerd.
+de base image creeert een database. Bij het runnen wordt de bestaand volume buiten de container zichtbaar.
 
 
-Je moet daarna rekening houden met deze containers. Runnende containers kunnen gestopt en weer gestart worden (zonder opnieuw te runnen).
-Het ENTRYPOINT wordt opnieuw uitgevoerd.
+geoserver
+---------
+Een geoserver.war (versie 2.6.0) moet worden uitgebreid met wps en python scripts. Hier is ~/prepare_geoserver/geoserver.sh beschikbaar. 
+Dit download alles en pakt uit. Het resultaat komt in ~/geoserver. Deze map wordt aan de geoserver container meegeven.
+De GEOSERVER_DATA_DIR genoemd in web.xml (geoserver-2.6.0/Dockerfile) wordt ook meegegeven aan de container. Dit is ~/data/geoserverdata/
+In geoserverdata/workspace moet de datastore in model_wildfire worden aangepast. De server heet postgres. 
+Het wachtwoord van tomt is anders dan op de 192.168.40.8. (zie store: /jansen (tomt))
+De wps scripts moeten de juiste connectieparameters gebruiken postgres 5432 en virtualhost.
 
-Als er nog helamaal geen containers zijn moet je een image runnen. De container krijgt een tag name (container name)
+prepare apache
+--------------
+De hele ~/git/gmi directory wordt gemapt op /var/www/main/gmi
+Ook hier moeten de scripts de juiste connectieparameters gebruiken postgres:5432 en geoserver:8080.
+Let ook op de paden naar gdal in settings.py.
+
+settings.py: 
+
+	conn_params = "host=postgres port=5432 dbname=research user=modeluser password=modeluser"
+	pgserver_host = 'postgres'
+	pgserver_port = '5432'
+	pgserver_user = 'modeluser'
+	gs_host = 'geoserver'
+	gs_port='8080'
+
+	gdal_translate_path = '/usr/bin/gdal_translate'
+	gdalwarp_path = '/usr/bin/gdalwarp'
+	lcpmake_path = '/var/www/main/gmi/bin/lcpmake'
+	farsite_path = '/var/www/main/gmi/bin/farsite'
+	output_basepath  = '/var/data/wildfire/'
+	defaults_path = '/var/www/main/gmi/defaults/'
+
+
+runnen
+------
+
+Onze images worden gerund als daemon (op de actergrond) met daarin een service op een poort (EXPOSE).
+Normaal als docker iets runt, wordt het commando uitgevoerd en eindigt de run. De container gaat weer uit.
+Maar we willen dat in de container de service blijft draaien. Dan moet dat process op de FOREGROUND draaien.
+Het fine-tunen van het opstartproces wordt vaak geregeld in een shell script, dat als ENTRYPOINT wordt gebruikt na docker start.
+
+
+Je moet na docker run rekening houden met het bestaan van de container. Runnende containers kunnen gestopt en weer gestart worden (zonder opnieuw te runnen).
+Het ENTRYPOINT wordt na $ docker start opnieuw uitgevoerd.
+
+Kijk welke containers er zijn.
 
 	$ docker ps -a
 
-er zijn geen containers
 
+Als er helemaal geen containers zijn moet je nog een run commando geven.
+
+Als er wel containers zijn, kun je die weer starten (met zijn container naam).
+
+De container krijgt in het run commando een tag name (container name) (dit wordt een grappige random naam, maar we gaan hem met -t zelf meegeven.)
 
 Er zijn 3 run scripts drun-1-p.sh drun-2-p-g.sh en drun-3-p-g-a. 
-Bekijk de parameters: belangrijke info worden in het run-commando aan de container gegeven: -p = port mapping, -v = volumes --link andere containers
+Bekijk deze scripts en vooral de parameters: 
+belangrijke info worden in het run-commando aan de container gegeven: -p = port mapping, -v = volumes --link andere containers
 
 Links 
 -----
@@ -288,6 +340,11 @@ Volumes
 Om te voorkomen dat images data gaat bevatten, die kwijt raakt als het image opnieuw gebouwd moet worden, bewaren we de data buiten de daemon images. 
 Dit kan in aparte docker images (zodat je eenvoudig van databases kan verwisselen), maar wij hebben data gemapt op directories van het host systeem. 
 Zie folder ~/data (/ubuntu/home/data)
+
+Logging
+=======
+De logging is niet buiten de container in te zien. Binnen de containers produceren geoserver, tomcat en apache logging. postgres doet dit niet, omdat het proces
+
 
 
 Opnieuw bouwen
