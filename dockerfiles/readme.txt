@@ -3,51 +3,58 @@ Natuurbrand model
 
 Componenten
 ===========
+
 Database
-	postgres 9.3 / postgis 2.1
+
+- postgres 9.3 / postgis 2.1
+
 Java Webserver 
-	tomcat7
-	Geoserver 2.6.0 (python/WPS/gdal-bin)
+
+- tomcat7
+- Geoserver 2.6.0 (python/WPS/gdal-bin)
+
 Webserver 
-	apache2
-	python 2.7 
-	gdal-bin
-	reverse proxy
-	farsite (dit model wordt aangestuurd via apache cgi) (copieer naar /usr/lib/)
+
+- apache2
+- python 2.7 
+- gdal-bin
+- reverse proxy
+- farsite (dit model wordt aangestuurd via apache cgi) (copieer naar /usr/lib/)
 
 Componenten die geinstalleerd moeten worden: git, postgis, gdal, python, geoserver, plugins voor wps en python, 32-bit support
 
 Authenticatie
 =============
--De site wordt afgeschermd met BASIC AUTHENTICATION
--De database toegang voor psql-scripts en pd-tools kan worden geregeld door de toegangsparameters in ~/.pgpass te zetten
-host:port:user:password (dit is op de localhost: localhost:5432:research:modeluser:modeluser)
-(python)  scripts moeten voor elke database call zelf de credentials mee opgeven.
- tomt:tomt
- modeluser:modeluser
- docker:docker
--Geoserver: admin:<het geheime wachtwoord>
+- De site wordt afgeschermd met BASIC AUTHENTICATION
+- De database toegang voor psql-scripts en pd-tools kan worden geregeld door de toegangsparameters in ~/.pgpass te zetten
+  host:port:user:password (dit is op de localhost: localhost:5432:research:modeluser:modeluser)
+  (python)  scripts moeten voor elke database call zelf de credentials mee opgeven.
+     tomt:tomt
+     modeluser:modeluser
+     docker:docker
+- Geoserver
+    admin:<het geheime wachtwoord>
 
 Werking
 =======
 
-Via de user interface, een kaart, wordt een gebied ingetekend als rechthoek
-Er wordt een terrein subset gemaakt (presentatie mbv. top10nl)
-Teken een vuurlijn
-Draai het model
+- Via de user interface, een kaart, wordt een gebied ingetekend als rechthoek
+- Er wordt een terrein subset gemaakt (presentatie mbv. top10nl)
+- Teken een vuurlijn
+- Draai het model
 
 Flow
 ====
 De software die de besturing regelt zit in de vorm van JavaScript op de client.
 De Ajax calls waarmee gegevens naar de server worden gestuurd gaan naar de wps omgeving, die via de Webserver wordt gevonden.
 
-De WPS scripts roepen CGI scripts aan op de Webserver
+- De WPS scripts roepen CGI scripts aan op de Webserver
 
-De CGI scripts roepen op hun beurt weer WPS aan.
+- De CGI scripts roepen op hun beurt weer WPS aan.
 
-Op het filesysteem, binnen de data direcotry van geoserver, worden features toegevoegd.
+- Op het filesysteem, binnen de data direcotry van geoserver, worden features toegevoegd.
 
-Zowel WPS scripts als CGI scripts hebben toegang tot de database nodig
+- Zowel WPS scripts als CGI scripts hebben toegang tot de database nodig
 
 
 Deployment
@@ -70,7 +77,7 @@ Dit geldt voor de tiffs van de hoogtekaart, de geoserverdata en de postgres data
 
 
 VirtualBox of VMWare
-====================]
+====================
 Virtual box kan een vmdx openen en draaien
 
 Creer een virtual ubuntu 14.04 box vooralsnog Bridged (over de wired  connection), met als user ubuntu (levert /home/ubuntu/). 
@@ -79,19 +86,17 @@ De HardDisk moet 40Gb zijn, een basis draaiend systeem is 30Gb.
 
 Data
 ====
-
 Er zijn 2 databronnen
+
 1. de geoserver data directory
 2. en de postgres/gis database, met daarin 4 schema's, deels  gevuld met data
 	de data komt van dezelfde schema's van 192.168.40.8 research database 
 	de administration, model_wildfire, top10nl, dems.
 	de dems wordt met raster2psql gevuld
 	in ./dockerfiles/postgres-9.3-run/ddl bevindt zich een dump script, bedoeld om de gegevens en de schema definities op te halen.
-1.
-De geoserver data directory kan buiten de webserver worden gehouden als complete directory structuur. Deze is ongeveer 800 Mb, en bevat onder meer de terrein web-cache.
+ad 1. De geoserver data directory kan buiten de webserver worden gehouden als complete directory structuur. Deze is ongeveer 800 Mb, en bevat onder meer de terrein web-cache.
 
-2.
-De postgis database heeft behalve tabellen die de parameters voor het rekenmodel bewaren, met name een ahn1 tabel met rasters (dems.ahn1).
+ad 2. De postgis database heeft behalve tabellen die de parameters voor het rekenmodel bewaren, met name een ahn1 tabel met rasters (dems.ahn1).
 Deze rasters worden ingelezen mbt. een postgis tool. De files moeten voor de database zichtbaar blijven, na inlezen kan de ahn bron niet verplaatst worden.
 De ahn bevat 6.2Gb aan tiff files. De postgres database is 12Gb, incl. ahn1 en top10nl (top10nl.sql is 13Gb).
 
@@ -102,32 +107,38 @@ De params_ tabellen in administration kunnen worden leeggemaakt (truncate)
 Kopieren van data
 -----------------
 
-$ git clone https://github.com/Geodan/gmi
-$ scp geodan@192.168.40.5:/var/data/geoserverdata ~/data/geoserverdata
-$ scp geodan@192.168.24.15:/var/data/geodata/ahn1/raster5  ~/data/ahn/raster5
+	$ git clone https://github.com/Geodan/gmi
+	$ scp geodan@192.168.40.5:/var/data/geoserverdata ~/data/geoserverdata
+	$ scp geodan@192.168.24.15:/var/data/geodata/ahn1/raster5  ~/data/ahn/raster5
 
 
 Het inlezen van de ddl en gebruik van raster2psql
 -------------------------------------------------
 
-Voor het vullen van de database gebruiken we psql en raster2psql. Deze tools zijn aanwezig in de postgres container. (Zie Docker)
+Gebruik voor het vullen van de database psql en raster2psql. Deze tools zijn aanwezig in de postgres container. (Zie Docker)
 Na het runnen van de postgres container kun je naar postgres met docker-enter postgres .
+
 Je kan ook mbv je netwerk en eigen postgres installatie (versie 9.3) de remote database vullen.
 
 De ddl scripts kunnen via psql  research worden ingelezen. 
-voorbeeld : psql -h localhost -d research -U modeluser -f <SQL-file>
-voorbeeld : raster2pgsql -I -F -x -r -a  -s 28992 -R /home/ubuntu/a.tiff dems.ahn1 | psql -h localhost -d research -U modeluser
-de tif files moet vanuit de database in de container gezien dezelfde padverwijzign hebben. Zie Docker: drun-1-p.sh -v volume referentie.
 
+	- voorbeeld : psql -h localhost -d research -U modeluser -f <SQL-file>
+	- voorbeeld : raster2pgsql -I -F -x -r -a  -s 28992 -R /home/ubuntu/data/ahn/raster5/a.tiff dems.ahn1 | psql -h localhost -d research -U modeluser
+		In de /home/ubuntu/data/ahn/raster5 directory bevindt zich een script voor deze import
 
+De tif files moet vanuit de database in de container gezien dezelfde padverwijzign hebben. Zie Docker: drun-1-p.sh -v volume referentie.
 
 
 Docker
 ======
-Docker installeren : curl -sSL https://get.docker.com/ubuntu/ | sudo sh
+Docker installeren 
+	
+	curl -sSL https://get.docker.com/ubuntu/ | sudo sh
+
 Om docker te runnen zonder sudo : USER toevoegen aan docker groep. (sudo groupadd docker, als docker groep niet bestaat)
-sudo gpasswd -a ${USER} docker
-sudo service docker restart
+
+	$ sudo gpasswd -a ${USER} docker
+	$ sudo service docker restart
 
 docker-enter utility
 --------------------
@@ -149,7 +160,7 @@ Gebruik:
 
 In ~/git/gmi/dockerfiles bevinden zich de 7 Dockerfiles voor de 7 images, waarvan er uiteindelijk 3 als container gerund worden.
 In dezelfde directory bevinden zich een hoop shell scripts die helpen met docker management.
-De shell-scripts gebruiken relative paden dus ga naar ~/git/gmi/dockerfiles alvorens ze te gebruiken.
+De shell-scripts gebruiken relatieve paden dus ga naar ~/git/gmi/dockerfiles alvorens ze te gebruiken.
 
 Een image wordt gemaakt met docker build -t <image-name> <Dockerfile locatie>
 let op: voordat je nog eens bouwt moet de image eerst wordt verwijderd met docker rmi <image-name>
@@ -159,15 +170,16 @@ let op: voordat je een image kunt verwijderen, mag hij niet meer in gebruik zijn
 Images / Dockerfile
 -------------------
 Images bouwen op elkaar. 
-- De docker file begint met FROM <image:tag>. 
-- Daarna RUN je commando's op dit image (uitbreiding). 
-	In de RUN statements zie je het apt-get install verschijnen.
-	Maar ook regels die iets toevoegen aan configuratiebestanden
-- Voeg hele bestanden toe met ADD (bv. een uitgekiende 000-default.conf aan /etc/apache2/sites-available)
-- Daarna kan je een proces laten starten op het image. In ENTRYPOINT komt het opstart commando
-	Dit opstart commando is vaak een shell script dat tevoren met ADD is toegevoegd aan de image.
-	docker run start dit script, elke keer als de container met docker start opnieuw wordt gestart wordt het ENTRYPOINT opnieuw gedaan.
-	Zie postgres-9.3-run/run.sh
+
+	- De docker file (genaamd Dockerfile) begint met FROM <image:tag>. 
+	- Daarna RUN je commando's op dit image (uitbreiding). 
+		In de RUN statements zie je het apt-get install verschijnen.
+		Maar ook regels die iets toevoegen aan configuratiebestanden
+	- Voeg hele bestanden toe met ADD (bv. een uitgekiende 000-default.conf aan /etc/apache2/sites-available)
+	- Daarna kan je een proces laten starten op het image. In ENTRYPOINT komt het opstart commando
+		Dit opstart commando is vaak een shell script dat tevoren met ADD is toegevoegd aan de image.
+		docker run start dit script, elke keer als de container met docker start opnieuw wordt gestart wordt het ENTRYPOINT opnieuw gedaan.
+		Zie postgres-9.3-run/run.sh
 
 De images opzet
 ---------------
@@ -177,51 +189,50 @@ docker images worden in dedocker registry gezoncht als ze lokaal niet bestaan
 
 Elke Dockerfile moet in een eigen directory zitten
 
-./postgres-9.3
-postgres93 image: met postgres en postgis + toegangs regeling + GDAL enable)
-FROM quantumobject/docker-baseimage
+./postgres-9.3 : out of the box met postgres en postgis, maar ook configuratie (ip: toegang + GDAL enable)
 
-./postgres-9.3-run
-postgres image (postgres) dat we gaan runnen
-FROM postgres93
+	FROM quantumobject/docker-baseimage
 
-./natuurbrand-web-base
-een basis web image, waarop de gemeenschappelijke componenten van de geoserver en apache image al staan (zoals 32 bit support en gdal-bin)
-FROM quantumobject/docker-baseimage
+./postgres-9.3-run : postgres image (postgres) dat we gaan runnen
 
-./apache2
-een apache2 image
-FROM web-base
+	FROM postgres93
 
-./tomcat7
-een tomcat7 image
-FROM web-base
+./natuurbrand-web-base : een basis web image, waarop de componenten die geoserver en apache nodig hebben (32-bit support en gdal-bin)
 
-./apache2-run
-een apache image (apache) met de configuratie die we gaan runnen
-FROM apache2
+	FROM quantumobject/docker-baseimage
 
-./geoserver-2.6.0
-een tomcat image  (geoserver) met de configuratie die we gaan runnen
-FROM tomcat7
+./apache2 : out of the box
 
+	FROM web-base
 
+./tomcat7 : out of the box
+
+	FROM web-base
+
+./apache2-run : apache image  met de configuratie die we gaan runnen als apache
+
+	FROM apache2
+
+./geoserver-2.6.0 : tomcat image  (geoserver) met de configuratie die we gaan runnen als geoserver
+
+	FROM tomcat7
 
 Images bouwen
 =============
 
-$ docker images
+	$ docker images
+
 er zijn geen images
 
 gebruik -t om een image name te geven die later gebruikt wordt in FROM
 
-$ docker build -t web-base ./natuurbrand-web-base
-$ docker build -t tomcat ./tomcat7
-$ docker build -t geoserver ./geoserver-2.6.0
-$ docker build -t postgres93 ./postgres-9.3
-$ docker build -t postgres ./postgres-9.3-run
-$ docker build -t apache2 ./apache2
-$ docker build -t apache ./apache2-run
+	$ docker build -t web-base ./natuurbrand-web-base
+	$ docker build -t tomcat ./tomcat7
+	$ docker build -t geoserver ./geoserver-2.6.0
+	$ docker build -t postgres93 ./postgres-9.3
+	$ docker build -t postgres ./postgres-9.3-run
+	$ docker build -t apache2 ./apache2
+	$ docker build -t apache ./apache2-run
 
 (dit duurt allemaal tegelijk lang, maar het opnieuw maken van de run images duren nog maar kort)
 
@@ -241,7 +252,8 @@ Het ENTRYPOINT wordt opnieuw uitgevoerd.
 
 Als er nog helamaal geen containers zijn moet je een image runnen. De container krijgt een tag name (container name)
 
-$ docker ps -a
+	$ docker ps -a
+
 er zijn geen containers
 
 
@@ -254,26 +266,28 @@ Na docker run -d -t A imageA kun je docker run -d -t B --link A:A imageB doen: i
 Zo kan je deze naam gebruiken in calls naar server A vanuit container B.
 
 Je moet de containers dus in volgorde starten om de links te kunnen resolven.
-Bij crosslinks (container A gebruikt container B en cointainer B gebruikt container A die container B gebruikt) kan de --add-host uitkomst bieden als je de virtual host zelf bekend maakt in de container. 
+Bij crosslinks kan de --add-host uitkomst bieden. 
+Stel container 3 (apache) gebruikt container 2 (geoserver) en geoserver  gebruikt serverside apache (die zelf daar dan weer geoserver gebruikt). 
+Maak dan de virtual host zelf bekend binnen container 2 (geoserver). apache is immers beschikbaar op de virtualhost poort 80.
 
 --add-host=virtualhost:$(ip addr show eth0 | awk '/ inet / {split($2,arr,"/");print arr[1]}'))
+IP virtualhost wordt toegevoegd aan de /etc/host file
+De geoserver container kan op deze manier serverside curl requests naar de host sturen (ipv naar de container).
 
-Dit laatste is in onze geval nodig bij de tweede container : geoserver. de apache conntainer bestaat nog niet: de geoserver container kan op deze manier serverside curl requests naar de host sturen.
-Andersom is geen optie: de apache server gebruikt ook de geoserver container.
 
+Om het run proces iets te vereenvoudigen:
 
-Om dit proces iets te vereenvoudigen:
-~/drun.sh
+	./drun.sh
 
-Als de virtual host uit gaat wordten de containers gestopt. (dit kun je zelf doen met ~/dstop.sh)
-Als de virtual host weer wordt opgestart, moeten de containers weer worden gestart met ~/dstart.sh
+Als de virtual host uit gaat, worden de containers gestopt. ( ./dstop.sh)
+Als de virtual host weer wordt opgestart, moeten de containers weer worden gestart met ./dstart.sh
 
 
 Volumes
 -------
-Om te voorkomen dat images data gaat bevatten, die kwijtraakt als het image opnieuw gebouwd moet worden, bewaren we de data buiten de daemon images. 
+Om te voorkomen dat images data gaat bevatten, die kwijt raakt als het image opnieuw gebouwd moet worden, bewaren we de data buiten de daemon images. 
 Dit kan in aparte docker images (zodat je eenvoudig van databases kan verwisselen), maar wij hebben data gemapt op directories van het host systeem. 
-Zie ~/data
+Zie folder ~/data (/ubuntu/home/data)
 
 
 Opnieuw bouwen
