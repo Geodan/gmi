@@ -15,7 +15,5 @@ ENV PGPASSWORD docker
 # Add very important files
 ADD run.sh /run.sh
 
-EXPOSE 5432
-
 ENTRYPOINT /run.sh
 

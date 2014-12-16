@@ -4,13 +4,16 @@ Natuurbrand model
 Componenten
 ===========
 Database
-	postgres/postgis
-Java Webserver (tomcat7)
-	Geoserver (Python/WPS)
-Webserver (apache2)
-	onstluit alle componenten
-	farsite (dit model wordt aangestuurd binnen de Webserver (apache cgi))
+	postgres 9.3 / postgis 2.1
+Java Webserver 
+	tomcat7
+	Geoserver 2.6.0 (python/WPS/gdal-bin)
+Webserver 
+	apache2
+	python 2.7 
+	gdal-bin
 	reverse proxy
+	farsite (dit model wordt aangestuurd via apache cgi) (copieer naar /usr/lib/)
 
 Componenten die geinstalleerd moeten worden: git, postgis, gdal, python, geoserver, plugins voor wps en python, 32-bit support
 
@@ -23,12 +26,12 @@ host:port:user:password (dit is op de localhost: localhost:5432:research:modelus
  tomt:tomt
  modeluser:modeluser
  docker:docker
--Geoserver: admin:Gehijm
+-Geoserver: admin:<het geheime wachtwoord>
 
 Werking
 =======
 
-Via de user interface, een kaart, wordt een gebied ingeteket als rechthoek
+Via de user interface, een kaart, wordt een gebied ingetekend als rechthoek
 Er wordt een terrein subset gemaakt (presentatie mbv. top10nl)
 Teken een vuurlijn
 Draai het model
@@ -47,51 +50,75 @@ Op het filesysteem, binnen de data direcotry van geoserver, worden features toeg
 Zowel WPS scripts als CGI scripts hebben toegang tot de database nodig
 
 
-
-Data
-====
-
-Er zijn 2 databronnen
-1. de geoserver data directory
-2. en de postgres/gis database.
-
-1.
-De geoserver data directory kan buiten de webserver worden gehouden als complete directory structuur. Deze is ongeveer 800 Mb, en bevat onder meer de top10nl web-cache.
-
-2.
-De postgis database heeft behalve tabellen die de parameters voor het rekenmodel bewaren met name een ahn tabel met rasters (dems.ahn1).
-Deze rasters worden ingelezen mbt. een postgis tool. De files moeten voor de database zichtbaar blijven, na inlezen kan de ahn bron niet verplaatst worden.
-voorbeeld : raster2pgsql -I -F -x -r -a  -s 28992 -R /home/ubuntu/a.tiff dems.ahn1 | psql -h localhost -d research -U modeluser
-De ahn bevat 6.2Gb aan tiff files. De postgres database is 12Gb.
-
-
 Deployment
 ==========
 
-In de ontwikkelomgeving (Geodan omgeving) staan de genoemde componenten op drie servers, bron data van de ah komt van de titania (staat blijkbaar niet op de (40.8). Voor de uitlevering wordt een Virtual Host gebruikt, waarop alles opnieuw moet worden geinstalleerd.
-In principe worden alle genoemende componenten op 1 virtual host geinstalleerd en werkend gemaakt (denk aan settings waarin paden, hosts en ports, users/passwds  worden gezet). Klanten draaien de Virtual Machine lokaal op de laptop.
+Voor de uitlevering wordt een Virtual Host gebruikt, waarop alles opnieuw moet worden geinstalleerd.
+In principe worden alle genoemende componenten op 1 virtual host geinstalleerd en werkend gemaakt (denk aan settings waarin paden, hosts en ports, users/passwds  worden gezet). 
+Klanten draaien de Virtual Machine lokaal op de laptop.
 
-Voor de laatste levering gebruiken we Docker. Docker kan de drie-server-opzet aanhouden in de vorm van verschillende ubuntu images die alle alles op 1 en dezelfde server staan. De drie omgevingen kunnen afzonderlijk worden geconfigureerd en in delen worden samengesteld en relatief makkelijk worden gewijzigd. Momenteel zijn er voor dit project 7 images, waarvan er 3 gerund worden.
+In de ontwikkelomgeving (Geodan omgeving) staan de genoemde componenten op drie servers:
+- bron data van de ahn komt van de titania (staat blijkbaar niet op de (192.168.40.8). 
+
+In plaats nu om alles op 1 virtuele macine te zetten gebruiken we voor de verandering Docker.
+Docker kan de drie-server-opzet aanhouden in de vorm van verschillende ubuntu images die alle alles op 1 en dezelfde server staan. 
+De drie omgevingen kunnen afzonderlijk worden geconfigureerd en in delen worden samengesteld en relatief makkelijk worden gewijzigd. 
+Momenteel zijn er voor dit project 7 images, waarvan er 3 gerund worden.
 
 De datapakket kunnen buiten de Docker images blijven staan (persistent) en via parameters aan de verschillende containers worden doorgegeven.
-Dit geldt voor de tiffs van de hoogtekaart, de geoserverdata en de postgres database ~/data/postgresql/9.3/main/
-
+Dit geldt voor de tiffs van de hoogtekaart, de geoserverdata en de postgres database. Zie  ~/data/ (/home/ubuntu/data)
 
 
 VirtualBox of VMWare
 ====================]
 Virtual box kan een vmdx openen en draaien
 
-Creer een virtual ubuntu 14.04 box vooralsnog Bridged (over de wired  connection), met als user ubuntu (levert /home/ubuntu/)
+Creer een virtual ubuntu 14.04 box vooralsnog Bridged (over de wired  connection), met als user ubuntu (levert /home/ubuntu/). 
+De HardDisk moet 40Gb zijn, een basis draaiend systeem is 30Gb.
 
-Ga uit van
+
+Data
+====
+
+Er zijn 2 databronnen
+1. de geoserver data directory
+2. en de postgres/gis database, met daarin 4 schema's, deels  gevuld met data
+	de data komt van dezelfde schema's van 192.168.40.8 research database 
+	de administration, model_wildfire, top10nl, dems.
+	de dems wordt met raster2psql gevuld
+	in ./dockerfiles/postgres-9.3-run/ddl bevindt zich een dump script, bedoeld om de gegevens en de schema definities op te halen.
+1.
+De geoserver data directory kan buiten de webserver worden gehouden als complete directory structuur. Deze is ongeveer 800 Mb, en bevat onder meer de terrein web-cache.
+
+2.
+De postgis database heeft behalve tabellen die de parameters voor het rekenmodel bewaren, met name een ahn1 tabel met rasters (dems.ahn1).
+Deze rasters worden ingelezen mbt. een postgis tool. De files moeten voor de database zichtbaar blijven, na inlezen kan de ahn bron niet verplaatst worden.
+De ahn bevat 6.2Gb aan tiff files. De postgres database is 12Gb, incl. ahn1 en top10nl (top10nl.sql is 13Gb).
+
+De data kan worden opgeschoond, door resultaat features te verwijderen zijnde de geoserver objecten en de bijbehorende tabelen op postgres.
+De params_ tabellen in administration kunnen worden leeggemaakt (truncate)
+
 
 Kopieren van data
-=================
+-----------------
 
-git clone https://github.com/Geodan/gmi
-scp geodan@192.168.40.5:/var/data/geoserverdata ~/data/geoserverdata
-scp geodan@192.168.24.15:/var/data/geodata/ahn1/raster5  ~/data/ahn/raster5
+$ git clone https://github.com/Geodan/gmi
+$ scp geodan@192.168.40.5:/var/data/geoserverdata ~/data/geoserverdata
+$ scp geodan@192.168.24.15:/var/data/geodata/ahn1/raster5  ~/data/ahn/raster5
+
+
+Het inlezen van de ddl en gebruik van raster2psql
+-------------------------------------------------
+
+Voor het vullen van de database gebruiken we psql en raster2psql. Deze tools zijn aanwezig in de postgres container. (Zie Docker)
+Na het runnen van de postgres container kun je naar postgres met docker-enter postgres .
+Je kan ook mbv je netwerk en eigen postgres installatie (versie 9.3) de remote database vullen.
+
+De ddl scripts kunnen via psql  research worden ingelezen. 
+voorbeeld : psql -h localhost -d research -U modeluser -f <SQL-file>
+voorbeeld : raster2pgsql -I -F -x -r -a  -s 28992 -R /home/ubuntu/a.tiff dems.ahn1 | psql -h localhost -d research -U modeluser
+de tif files moet vanuit de database in de container gezien dezelfde padverwijzign hebben. Zie Docker: drun-1-p.sh -v volume referentie.
+
 
 
 
@@ -102,79 +129,112 @@ Om docker te runnen zonder sudo : USER toevoegen aan docker groep. (sudo groupad
 sudo gpasswd -a ${USER} docker
 sudo service docker restart
 
-Docker-enter utility
-====================
+docker-enter utility
+--------------------
 Handig om een containers in te gaan die gestart werd met docker run -d (daemon)
 
-Installeren: docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
+Installeren via docker: 
 
-Gebruik: docker-enter apache (als apache een runnende container is)
+	$ docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
+
+Gebruik: 
+
+	$ docker-enter apache
+	$ docker-enter postgres
+	$ docker-enter geoserver
 
 
 ~/git/gmi/dockerfiles
-=====================
+---------------------
 
 In ~/git/gmi/dockerfiles bevinden zich de 7 Dockerfiles voor de 7 images, waarvan er uiteindelijk 3 als container gerund worden.
-In dezeldfe directory bevinden zich een hoop shell scripts die helpen om alles goed in te stellen
+In dezelfde directory bevinden zich een hoop shell scripts die helpen met docker management.
+De shell-scripts gebruiken relative paden dus ga naar ~/git/gmi/dockerfiles alvorens ze te gebruiken.
 
-een image wordt gemaakt met docker build -t <image-name> <Dockerfile locatie>
-let op: voordat je nog eens bouwt moet de image erst wordt verwijderd met docker rmi <image-name>
-let op: voordat je een image kunt verwijderen, mag hij niet meer in gebruik zijn.
-
-Images bouwen op elkaar.
-
-De opzet
-========
-kies een basis image: dit kan zijn ubuntu:14.04, maar ik kies voor een afgemeten versie hiervan quantumobject/docker-baseimage
-Hier wordt een tag name (image name) gebruikt
+Een image wordt gemaakt met docker build -t <image-name> <Dockerfile locatie>
+let op: voordat je nog eens bouwt moet de image eerst wordt verwijderd met docker rmi <image-name>
+let op: voordat je een image kunt verwijderen, mag hij niet meer in gebruik zijn (container stoppen en verwijderen).
 
 
-een postgres93 image: met postgres en postgis + toegangs regeling + GDAL enable)
+Images / Dockerfile
+-------------------
+Images bouwen op elkaar. 
+- De docker file begint met FROM <image:tag>. 
+- Daarna RUN je commando's op dit image (uitbreiding). 
+	In de RUN statements zie je het apt-get install verschijnen.
+	Maar ook regels die iets toevoegen aan configuratiebestanden
+- Voeg hele bestanden toe met ADD (bv. een uitgekiende 000-default.conf aan /etc/apache2/sites-available)
+- Daarna kan je een proces laten starten op het image. In ENTRYPOINT komt het opstart commando
+	Dit opstart commando is vaak een shell script dat tevoren met ADD is toegevoegd aan de image.
+	docker run start dit script, elke keer als de container met docker start opnieuw wordt gestart wordt het ENTRYPOINT opnieuw gedaan.
+	Zie postgres-9.3-run/run.sh
+
+De images opzet
+---------------
+
+Kies eerste een basis image: dit kan zijn ubuntu:14.04, maar ik kies voor een afgemeten versie hiervan quantumobject/docker-baseimage
+docker images worden in dedocker registry gezoncht als ze lokaal niet bestaan
+
+Elke Dockerfile moet in een eigen directory zitten
+
+./postgres-9.3
+postgres93 image: met postgres en postgis + toegangs regeling + GDAL enable)
 FROM quantumobject/docker-baseimage
 
-een postgres image (postgres) dat we gaan runnen
+./postgres-9.3-run
+postgres image (postgres) dat we gaan runnen
 FROM postgres93
 
-een basis web image waarop de gemenschappelijke componenten van de geoserver en apache image al staan
+./natuurbrand-web-base
+een basis web image, waarop de gemeenschappelijke componenten van de geoserver en apache image al staan (zoals 32 bit support en gdal-bin)
 FROM quantumobject/docker-baseimage
 
+./apache2
 een apache2 image
 FROM web-base
 
+./tomcat7
 een tomcat7 image
 FROM web-base
 
+./apache2-run
 een apache image (apache) met de configuratie die we gaan runnen
 FROM apache2
 
+./geoserver-2.6.0
 een tomcat image  (geoserver) met de configuratie die we gaan runnen
 FROM tomcat7
 
 
-Te werk
-=======
+
+Images bouwen
+=============
 
 $ docker images
 er zijn geen images
 
-docker build -t web-base ./natuurbrand-web-base
-docker build -t tomcat ./tomcat7
-docker build -t geoserver ./geoserver-2.6.0
-docker build -t postgres93 ./postgres-9.3
-docker build -t postgres ./postgres-9.3-run
-docker build -t apache2 ./apache2
-docker build -t apache ./apache2-run
+gebruik -t om een image name te geven die later gebruikt wordt in FROM
+
+$ docker build -t web-base ./natuurbrand-web-base
+$ docker build -t tomcat ./tomcat7
+$ docker build -t geoserver ./geoserver-2.6.0
+$ docker build -t postgres93 ./postgres-9.3
+$ docker build -t postgres ./postgres-9.3-run
+$ docker build -t apache2 ./apache2
+$ docker build -t apache ./apache2-run
 
 (dit duurt allemaal tegelijk lang, maar het opnieuw maken van de run images duren nog maar kort)
 
-Voor het opnieuw maken zie rpo en rpo93, rapa en rapa2, rgeo
+Voor het opnieuw maken zie rpo.sh en rpo93.sh, rapa.sh en rapa2.sh, rgeo.sh
 
 
-Runnen
-======
-Sommige images worden gerund. Niet eenmalig maar als daemon mer daarin een service op een poort.
+Images runnen
+=============
+
+Sommige images worden gerund als daemon met daarin een service op een poort (EXPOSE).
 In het image moet een service draaien, en die moet blijven draaien, dus niet zelf als service, maar als FORGROUND process in de container.
 Het fine tunen van het opstartproces wordt vaak geregeld in een shell script, dat als ENTRYPOINT wordt gebruikt na docker start.
+
 
 Je moet daarna rekening houden met deze containers. Runnende containers kunnen gestopt en weer gestart worden (zonder opnieuw te runnen).
 Het ENTRYPOINT wordt opnieuw uitgevoerd.
@@ -185,10 +245,21 @@ $ docker ps -a
 er zijn geen containers
 
 
-Er zijn 3 run scripts drun-1 drun-2 en drun-3. Bekijk de parameters: belangrijke info worden in het runcommando aan de container gegeven: -p = port mapping, -v = volumes --link andere containers
-Je moet de containers dus in volgorde starten om de links te kunnen resolvenm.
-Bij crosslinks (container A gebruikt container B en cointainer B gebruikt container A die container B gebruikt) kan de --add-host uitkomst bieden als je de virtual host zelf bekend maakt in decontainer. --add-host=myserver:$(script om de ip adres van deze host te parsen)
-Dit laatse is in onze geval nodig bij de tweede container : geoserver
+Er zijn 3 run scripts drun-1-p.sh drun-2-p-g.sh en drun-3-p-g-a. 
+Bekijk de parameters: belangrijke info worden in het run-commando aan de container gegeven: -p = port mapping, -v = volumes --link andere containers
+
+Links 
+-----
+Na docker run -d -t A imageA kun je docker run -d -t B --link A:A imageB doen: in container B wordt nu  een entry voor A in de /etc/hosts file gezet.
+Zo kan je deze naam gebruiken in calls naar server A vanuit container B.
+
+Je moet de containers dus in volgorde starten om de links te kunnen resolven.
+Bij crosslinks (container A gebruikt container B en cointainer B gebruikt container A die container B gebruikt) kan de --add-host uitkomst bieden als je de virtual host zelf bekend maakt in de container. 
+
+--add-host=virtualhost:$(ip addr show eth0 | awk '/ inet / {split($2,arr,"/");print arr[1]}'))
+
+Dit laatste is in onze geval nodig bij de tweede container : geoserver. de apache conntainer bestaat nog niet: de geoserver container kan op deze manier serverside curl requests naar de host sturen.
+Andersom is geen optie: de apache server gebruikt ook de geoserver container.
 
 
 Om dit proces iets te vereenvoudigen:
@@ -198,18 +269,33 @@ Als de virtual host uit gaat wordten de containers gestopt. (dit kun je zelf doe
 Als de virtual host weer wordt opgestart, moeten de containers weer worden gestart met ~/dstart.sh
 
 
-
-Mocht je de cotainers opnieuw willen bouwen,. dan moet je eerst alle afhankelijkheden verwijderen:
-container stoppen en weggooien ( docker rm : of ~/drm.sh)
-image weggooien. ~/drmi.sh gooit de drie container images weg: ~/dbuild.sh bouwt de drie images (dus niet de  onderliggende andere 4)
-
-
-
+Volumes
+-------
+Om te voorkomen dat images data gaat bevatten, die kwijtraakt als het image opnieuw gebouwd moet worden, bewaren we de data buiten de daemon images. 
+Dit kan in aparte docker images (zodat je eenvoudig van databases kan verwisselen), maar wij hebben data gemapt op directories van het host systeem. 
+Zie ~/data
 
 
+Opnieuw bouwen
+=============
 
+data
+----
+De data in de database en de tiff files staan op het hostsysteem, maar mocht dit kwijt of corrupt raken, dan moet dit opnieuw naar de VM worden gebracht 
+en zonodig opnieuw in de  database ingelezen.
 
+docker
+------
+Mocht je de containers opnieuw willen bouwen, dan moet je eerst alle afhankelijkheden verwijderen:
 
+	- containers stoppen en weggooien 
+		docker stop : of ./dstop.sh
+		docker rm : of ./drm.sh)
+	- images weggooien. 
+		docker rmi : of ./drmi.sh gooit de drie container images weg: 
+			(./dbuild.sh bouwt de drie images (dus niet de  onderliggende andere 4))
 
+	- bekijk / gebruik de genoemde scripts (Images bouwen) om onderdelen opnieuw te bouwen en runnen.
 
+Mochten er conflicten ontstaan binnen docker management kijk dan met docker ps -a en docker images of werkelijk alle weg is. Je kan de hashes gebruiken bij stop rm en rmi.
 
