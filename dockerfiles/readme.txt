@@ -339,19 +339,26 @@ Als de virtual host weer wordt opgestart, moeten de containers weer worden gesta
 
 Volumes
 -------
-Om te voorkomen dat images data gaat bevatten, die kwijt raakt als het image opnieuw gebouwd moet worden, bewaren we de data buiten de daemon images. 
-Dit kan in aparte docker images (zodat je eenvoudig van databases kan verwisselen), maar wij hebben data gemapt op directories van het host systeem. 
+Om te voorkomen dat images data gaat bevatten, die kwijt raakt als het image opnieuw gebouwd moet worden, 
+bewaren we de data buiten de daemon images. 
+
+Dit kan in aparte docker images (zodat je eenvoudig van databases kan verwisselen), 
+maar wij hebben data gemapt op directories van het host systeem. 
+
 Zie folder ~/data (/ubuntu/home/data)
+
 
 Logging
 =======
-De logging is niet buiten de container in te zien. Binnen de containers produceren geoserver, postgresql, tomcat en apache logging.
+
+Binnen de containers produceren geoserver, postgresql, tomcat en apache logging.
 
 1. docker-enter postgres; cd /var/log/postgresql
 2. docker-enter geoserver; cd /var/log/tomcat7
 3. docker-enter apache; cd /var/log/apache2
 
-De logging van tomcat en apache zijn te zien in ~/data/log/[apache2/tomcat7] en ~/geoserverdata/logs, de postgres logging kan niet buiten de container bekeken worden.
+De logging van tomcat en apache zijn te zien in ~/data/log/[apache2/tomcat7] en ~/geoserverdata/logs, 
+de postgres logging kan niet buiten de container bekeken worden.
 
 
 VM reboot
@@ -367,7 +374,8 @@ Opnieuw bouwen
 
 data
 ----
-De data in de database en de tiff files staan op het hostsysteem, maar mocht dit kwijt of corrupt raken, dan moet dit opnieuw naar de VM worden gebracht 
+De data in de database en de tiff files staan op het hostsysteem, maar mocht dit kwijt of corrupt raken, 
+dan moet dit opnieuw naar de VM worden gebracht 
 en zonodig opnieuw in de database ingelezen.
 
 docker
