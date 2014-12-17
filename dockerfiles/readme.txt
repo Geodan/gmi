@@ -191,6 +191,8 @@ docker images worden in dedocker registry gezoncht als ze lokaal niet bestaan
 
 Elke Dockerfile moet in een eigen directory zitten
 
+De twee base images postgres93 en natuurbrand-web-base krijgen de juiste timezone setting
+
 ./postgres-9.3 : out of the box met postgres en postgis, maar ook configuratie (ip: toegang + GDAL enable)
 
 	FROM quantumobject/docker-baseimage
@@ -229,16 +231,16 @@ er zijn geen images
 gebruik -t om een image name te geven die later gebruikt wordt in FROM
 
 	$ docker build -t web-base ./natuurbrand-web-base
-	$ docker build -t tomcat ./tomcat7
+	$ docker build -t tomcat7 ./tomcat7
 	$ docker build -t geoserver ./geoserver-2.6.0
 	$ docker build -t postgres93 ./postgres-9.3
 	$ docker build -t postgres ./postgres-9.3-run
 	$ docker build -t apache2 ./apache2
 	$ docker build -t apache ./apache2-run
 
-(dit duurt allemaal tegelijk lang, maar het opnieuw maken van de run images duren nog maar kort)
+Dit duurt allemaal tegelijk minder dan 10 minuten. De run-images opnieuw maken duurt seconden.
 
-Voor het opnieuw maken zie rpo.sh en rpo93.sh, rapa.sh en rapa2.sh, rgeo.sh
+Voor het opnieuw maken van onderdelen zie rpo.sh en rpo93.sh, rapa.sh en rapa2.sh, rgeo.sh
 
 
 Images runnen
@@ -343,8 +345,21 @@ Zie folder ~/data (/ubuntu/home/data)
 
 Logging
 =======
-De logging is niet buiten de container in te zien. Binnen de containers produceren geoserver, tomcat en apache logging. postgres doet dit niet, omdat het proces
+De logging is niet buiten de container in te zien. Binnen de containers produceren geoserver, postgresql, tomcat en apache logging.
 
+1. docker-enter postgres; cd /var/log/postgresql
+2. docker-enter geoserver; cd /var/log/tomcat7
+3. docker-enter apache; cd /var/log/apache2
+
+De logging van tomcat en apache zijn te zien in ~/data/log/[apache2/tomcat7] en ~/geoserverdata/logs, de postgres logging kan niet buiten de container bekeken worden.
+
+
+VM reboot
+=========
+
+Wanneer de VM uit gaat stoppen de docker containers. Na een reboot wordt middels /etc/rc.local /home/ubuntu/onreboot.sh gerund.
+Deze doet een controle op de aanwezigheid van containers middels docker ps.
+Na oplevering mogen er maximaal 3 containers zijn, de output van docker ps -a bevat dan precies 4 regels.
 
 
 Opnieuw bouwen
@@ -353,11 +368,12 @@ Opnieuw bouwen
 data
 ----
 De data in de database en de tiff files staan op het hostsysteem, maar mocht dit kwijt of corrupt raken, dan moet dit opnieuw naar de VM worden gebracht 
-en zonodig opnieuw in de  database ingelezen.
+en zonodig opnieuw in de database ingelezen.
 
 docker
 ------
 Mocht je de containers opnieuw willen bouwen, dan moet je eerst alle afhankelijkheden verwijderen:
+dus eerst apache dan geoserver dan postgres
 
 	- containers stoppen en weggooien 
 		docker stop : of ./dstop.sh
@@ -366,7 +382,7 @@ Mocht je de containers opnieuw willen bouwen, dan moet je eerst alle afhankelijk
 		docker rmi : of ./drmi.sh gooit de drie container images weg: 
 			(./dbuild.sh bouwt de drie images (dus niet de  onderliggende andere 4))
 
-	- bekijk / gebruik de genoemde scripts (Images bouwen) om onderdelen opnieuw te bouwen en runnen.
+	- bekijk / gebruik de genoemde r...sh scripts (Images bouwen en runnen) om onderdelen opnieuw te bouwen en runnen.
 
-Mochten er conflicten ontstaan binnen docker management kijk dan met docker ps -a en docker images of werkelijk alle weg is. Je kan de hashes gebruiken bij stop rm en rmi.
-
+Mochten er conflicten ontstaan binnen docker management kijk dan met docker ps -a en docker images of werkelijk alles weg is. 
+Je kan de hashes gebruiken bij docker stop docker rm en docker rmi.
