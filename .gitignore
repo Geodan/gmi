@@ -1,5 +1,5 @@
 .htaccess
 .htpasswd
-/nbproject/private/
+./nbproject/private/
 node_modules
-cgi-bin/settings.py
+./cgi-bin/settings.py

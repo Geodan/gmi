@@ -1,4 +1,5 @@
-* Voorbereiding:
+Voorbereiding:
+=============
 
 Alle data downloaden van cumulus, nimbus, git, titania (ahn/raster5)
 
@@ -7,6 +8,7 @@ m.n.
   1. geoserverdata
   2. ahn files
   3. https://github.com/Geodan/gmi/
+  4. zie ./dockerfiles/posgres-9.3-run/ddldump.sh om data te halen
 
 gebruik bv. scp -rp geodan@192.168.40.8:/var/data/geoserverdata ~/data/geoserverdata
 
@@ -15,12 +17,15 @@ gebruik bv. scp -rp geodan@192.168.40.8:/var/data/geoserverdata ~/data/geoserver
 	./prepare_geoserver.sh
 		plaatst files met configuratie data in ~/geoserver en ~/data/geoserverdata
 
-* Docker
+
+Docker
+======
 
 In de docker directories bevinden zich files die naar de -v volumes worden gekopieerd
 
 de volgende (image) names (-t) zijn belangrijk in Dockerfiles (FROM) 
 
+  * docker build -t web-base ./natuurbrand-web-base
   * docker build -t tomcat ./tomcat7
   * docker build -t geoserver ./geoserver-2.6.0
   * docker build -t postgres93 ./postgres-9.3
@@ -45,6 +50,12 @@ gebruiken de container names die gecreeerd worden bij het aanmaken ervan in de v
   1. drun-1-p.sh
   2. drun-2-p-g.sh
   3. drun-3-g-a.sh
+
+utility
+
+	docker run --rm -v /usr/local/bin:/target jpetazzo/nsenter
+
+	docker-enter &lt;container-name> 
 
 herstarten webservices
 
