@@ -33,19 +33,19 @@ def main():
 	gs_host = settings.gs_host
 	gs_port = settings.gs_port
 
-	pad = os.getcwd() + "/logMakeSubset.txt"
-	try:
-		file = open(pad,"w" )
-		file.write(pad)
-		file.write("\n"+gs_host+":"+gs_port)
-		file.write("\nrunid=")
-		file.write(str(runid))
-	except IOError as e:
-		print "I/O error({0}): {1}".format(e.errno, e.strerror)
-	except ValueError:
-		print "Could not convert data to an integer."
-	except:
-		print "Unexpected error:", sys.exc_info()[0]
+	#pad = os.getcwd() + "/logMakeSubset.txt"
+	#try:
+	#	file = open(pad,"w" )
+	#	file.write(pad)
+	#	file.write("\n"+gs_host+":"+gs_port)
+	#	file.write("\nrunid=")
+	#	file.write(str(runid))
+	#except IOError as e:
+	#	print "I/O error({0}): {1}".format(e.errno, e.strerror)
+	#except ValueError:
+	#	print "Could not convert data to an integer."
+	#except:
+	#	print "Unexpected error:", sys.exc_info()[0]
 	updateStatus(runid, "running", 10)
 	
 	#Stap 1: Maak raster ahv landgebruik aan
@@ -87,18 +87,19 @@ ALTER TABLE model_wildfire.terrein_%s ADD PRIMARY KEY (gid);
 	data = (runid,runid,runid,runid ) #TODO, make nicer with 1 param
 	cur.execute(query, data )
 	conn.commit()
+	updateStatus(runid, "running", 50)
 	#TODO: error checking
 	curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>terrein_'+str(runid)+'</name></featureType>" http://' + gs_host + ':'+ gs_port + '/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	
-	file.write("\n"+curlstring)
+	#file.write("\n"+curlstring)
 	os.system(curlstring)
 	curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<featureType><nativeCRS>epsg:900913</nativeCRS><enabled>true</enabled></featureType>" http://'+gs_host+':'+gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes/terrein_'+str(runid)
-	file.write("\n"+curlstring)
+	#file.write("\n"+curlstring)
 	os.system(curlstring)
 	#Freakin bug, you have to add 'enabled': http://comments.gmane.org/gmane.comp.gis.geoserver.user/26753
 	curlstring = 'curl -v -u modeluser:modeluser -XPUT -H "Content-type: text/xml" -d "<layer><defaultStyle><name>top10nl_terrein</name></defaultStyle><enabled>true</enabled></layer>" http://'+gs_host+':'+gs_port+'/geoserver/rest/layers/model_wildfire:terrein_'+str(runid)
-	file.write("\n"+curlstring)
+	#file.write("\n"+curlstring)
 	os.system(curlstring)
-	file.close()	
+	#file.close()	
 	updateStatus(runid, "finished", 100)
 	return
 	       

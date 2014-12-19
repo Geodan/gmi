@@ -66,6 +66,10 @@ class farsiteRun():
 		lcpto = outdir + '/LANDSCAPE.LCP'
 		shutil.copy2(lcpfrom, lcpto)
 		
+		fmsfrom = '/var/www/main/gmi/defaults/Low.FMS' 
+		fmsto = outdir + '/LOW.FMS'
+		shutil.copy2(fmsfrom, fmsto)
+		
 		#WRITE OUT WINDSTRING FROM POSTGRES
 		windfile = '%s/WIND.WND' % outdir
 		f = open(windfile, 'w')
@@ -90,7 +94,7 @@ class farsiteRun():
 		vectorfile = '%s/IGNITION.VCT' % outdir
 		f = open(vectorfile, 'w')
 		vcttype = 'unknown'
-		
+		counter = 1
 		stringarray = wktString.split('!')
 		for string in stringarray:
 		    # * FIND GEOM TYPE
@@ -99,7 +103,8 @@ class farsiteRun():
 		        f.write('601\r\n')
 		    elif (string.find('LINESTRING') > -1):
 		        vcttype = 'line'
-		        f.write('1\r\n')
+		        f.write('0000000000' + str(counter) + '\r\n')
+		        counter = counter+1
 		    geomArr = string.replace('POINT(','').replace('LINESTRING(','').replace(')','').split(',')
 		    for coordinate in geomArr:
 		        numbers = coordinate.split(' ')
@@ -110,30 +115,15 @@ class farsiteRun():
 		f.write('END') #Why 2 times??
 		f.close()
 		
-		vectorfile = '%s/BARRIERS.BAR' % outdir
-		f = open(vectorfile, 'w')
-		vcttype = 'unknown'
-		barrier = False
-		# * FIND GEOM TYPE
-		for string in stringarray:
-		    if (string.find('POINT') > -1):
-		    	vcttype = 'point'
-		    	f.write('601\r\n')
-		    	barrier = True
-		    elif (string.find('LINESTRING') > -1):
-		    	vcttype = 'line'
-		    	f.write('1\r\n')
-		    	barrier = True
-		    if (barrier == True):
-		        geomArr = string.replace('POINT(','').replace('LINESTRING(','').replace(')','').split(',')
-		        for coordinate in geomArr:
-		            numbers = coordinate.split(' ')
-		            for number in numbers:
-		                f.write(str(int(round(float(number),0))) + ' ')
-		            f.write('\r\n')
-		        f.write('END\r\n')
-		f.write('END') #Why 2 times??
-		f.close()
+		#Write out stopline
+		pgserver_host = settings.pgserver_host #'192.168.40.5'
+		pgserver_port = settings.pgserver_port #'3389'
+		pgserver_user = settings.pgserver_user #'modeluser'
+		sqlstring = 'WITH arr As (SELECT regexp_split_to_array(stoplines,\'!\') arr FROM administration.params_farsiterun  WHERE run = '+str(runid)+'),series AS (SELECT generate_series(1,array_length(arr,1)) c FROM arr)SELECT ST_GeometryFromText(arr[c]) geom FROM series, arr'
+		callstring = 'ogr2ogr -f "ESRI Shapefile" '+str(outdir)+'barriers.shp -overwrite PG:"host=192.168.40.5 port=3389 user=modeluser dbname=research password=modeluser" -sql "' + sqlstring + '"'
+		#"SELECT ST_GeometryFromText(stoplines) FROM administration.params_farsiterun  WHERE run = '+str(runid)+'"'
+		print callstring
+		subprocess.call(callstring, shell=True)
 		
 		#TT: Starting new version from here...
 		outdir = os.path.join('/var/data/wildfire/fires/', str(runid))
@@ -157,11 +147,11 @@ class farsiteRun():
 		print 'setup model parameters'
 		params = ModelParameters()
 		params.setUnits(METRIC)
-		params.setTimestep(30)
-		params.setPrimaryVis(60)
-		params.setSecondaryVis(-1)
-		params.setPerimeterRes(60)
-		params.setDistanceRes(30)
+		params.setTimestep(15)
+		params.setPrimaryVis(30)
+		params.setSecondaryVis(60)
+		params.setPerimeterRes(60) #60
+		params.setDistanceRes(30) #30
 		cfg.setModelParameters(params)
 		
 		print 'setup fire behavior options'
@@ -181,31 +171,32 @@ class farsiteRun():
 
 		print 'duration options'
 		dur = DurationOptions()
-		dur.setConditioning(int(startMonth),int(startDay) )
-		dur.setStart(int(startMonth), int(startDay), int(startHour[:2]), int(startMin))
-		dur.setStop( int(endMonth), int(endDay), int(endHour[:2]), int(endMin))
+		dur.setConditioning(int(startMonth),int(startDay) -5 )
+		dur.setStart(int(startMonth), int(startDay), int(startHour[:2]), int(startHour[2:]))
+		dur.setStop( int(endMonth), int(endDay), int(endHour[:2]), int(endHour[2:]))
 		cfg.setDuration(dur)
 
 		# setup the highway as a barrier
-		#highway = ShapefileBarrier()
-		#highway.setFileName(os.path.join(indir, 'hwy_ab.shp'))
-		#cfg.addBarrierFile(highway)
+		highway = ShapefileBarrier()
+		highway.setFileName(os.path.join(outdir, 'barriers.shp'))
+		cfg.addBarrierFile(highway)
 
 		print 'ignition data'
 		ign = Ignition()
 		ign.setFile(os.path.join(outdir, 'IGNITION.VCT'))
-		ign.setType(Ignition.POINT)
+		ign.setType(Ignition.LINE)
 		cfg.setIgnition(ign)
 
 		print 'output options'
 		output = OutputOptions()
 		output.setUnits(METRIC)
-		output.setShapeFile(os.path.join(outdir, 'results.shp'), True, OutputOptions.POLYGON)
-		output.setRasterFile(os.path.join(outdir, 'ash_raster'), OutputOptions.ARC)
-		output.clearRasters()
-		output.addRaster(OutputOptions.TIME_OF_ARRIVAL)
-		output.addRaster(OutputOptions.FIRELINE_INTENSITY)
-		output.addRaster(OutputOptions.RATE_OF_SPREAD)
+		output.setShapeFile(os.path.join(outdir, 'results.shp'), True, OutputOptions.LINES)
+		#output.setRasterFile(os.path.join(outdir, 'ash_raster'), OutputOptions.ARC)
+		#output.clearRasters()
+		#output.addRaster(OutputOptions.TIME_OF_ARRIVAL)
+		#output.addRaster(OutputOptions.FIRELINE_INTENSITY)
+		#output.addRaster(OutputOptions.RATE_OF_SPREAD)
+		output.setBarriersSep(True);  
 		output.setLogFiles(True)
 		cfg.setOutputs(output)
 
@@ -217,7 +208,7 @@ class farsiteRun():
 		ctl.initialize(cfg)
 		ctl.saveSettings(os.path.join(outdir, 'Settings.txt'))
 		print 'Settings have been saved'
-		
+		              
 		timestep = 0
 		state = ctl.simulateNext()
 		print "Completed timestep: ", timestep
@@ -225,114 +216,31 @@ class farsiteRun():
 			state = ctl.simulateNext()
 			timestep += 1
 			print "Completed timestep: ", timestep
-		
+			self.updateStatus(runid, "running", 10 + (timestep), "Exporteren uitvoer")
 		ctl.terminate()
 		print 'finished'
-		   
 
-		#WRITE OUT SETTINGS FILE
-		#f = open(outdir + '/runSettings.txt', 'w')
-		#f.write("""
-		#	version=42
-		#	adjustmentfile=%(defaultsdir)sFactor_1.ADJ
-		#	fuelmoisturefile=%(defaultsdir)sLow.FMS
-		#	fuelmodelfile=
-		#	weatherfile0=%(outdir)s/weather.WTH
-		#	windFile0=%(outdir)s/wind.WND
-		#	landscapefile=%(outdir)s/landscape.LCP
-		#	burnperiodefile=
-		#	timestep=0.25
-		#	visiblestep=0.5h
-		#	secondaryvisiblestep=1h
-		#	perimeterresolution=60m
-		#	distanceresolution=30
-		#	enablecrownfire=false
-		#	linkcrowndensityandcover=false
-		#	embersfromtorchingtrees=true
-		#	enablespotfiregrowth=false
-		#	nwnsbackingros=false
-		#	distanceChecking=fireLevel
-		#	simulatePostFrontalCombustion=false
-		#	fuelInputOption=absent
-		#	calculationPrecision=normal
-		#	useConditioningPeriod = true
-		#	conditMonth = %(startMonth)s
-		#	conditDay = %(startDay)s
-		#	startMonth = %(startMonth)s
-		#	startDay = %(startDay)s
-		#	startHour = %(startHour)s
-		#	startMin = %(startMin)s
-		#	endMonth = %(endMonth)s
-		#	endDay = %(endDay)s
-		#	endHour = %(endHour)s
-		#	endMin = %(endMin)s
-		#	ignitionFile = %(outdir)s/ignition.VCT
-		#	ignitionFileType = %(vcttype)s
-		#	barrierFile = %(outdir)s/barrier.BAR
-		#	barrierFileType = %(vcttype)s
-		#	# point or line
-		#	vectMake = false
-		#	# Therefore we don't need the vectorFilename property
-		#	shapeMake = true
-		#	shapeFile = %(outdir)s/results.shp
-		#	rastMake = false
-		#	rasterFilename = %(outdir)s/results_raster
-		#	#Now explicitly set ALL raster options..do not rely on defaults
-		#	rast_arrivaltime = true
-		#	rast_fireIntensity = true
-		#	rast_spreadRate = true
-		#	rast_flameLength = false
-		#	rast_heatPerArea = false
-		#	rast_crownFire = false
-		#	rast_fireDirection = false
-		#	rast_reactionIntensity = false
-		#	""" % {'defaultsdir': settings.defaults_path,'outdir': outdir,'vcttype': vcttype,'startMonth':startMonth,'startDay':startDay,'startHour':startHour,'startMin':startMin,'endMonth':endMonth,'endDay':endDay,'endHour':endHour,'endMin':endMin})
-		#f.close()
-		#
-		################################################
-		##REPLACE THIS BY NEW FARSITE BATCH
-		##Actual run
-		##url = 'http://192.168.40.11/wildfire/cgi-bin/farsite_service'
-		##curlstring = 'curl -G -d "id='+str(runid)+'&coords=' + point + '&template='+template+'&weather='+ weatherString +'&wind=' + windString + '&day='+startDay+'&month='+startMonth+'&hour='+startHour+'&min=00&interval=1&duration=6" ' + url
-        #
-		#callstring = settings.farsite_path +' ' + outdir + '/runSettings.txt'
-		#killstring = "sleep 30 && kill `ps -C farsite | awk '{ print $1 }' | grep -v PID`" 
-		#
-		#
-		#try:
-		#	subprocess.Popen(killstring, shell=True) #This will kill all farsite processes within x seconds
-		#	output = subprocess.check_output(settings.farsite_path + ' '+outdir+'/runSettings.txt',shell=True)
-		#	if (output): #Any output is an error
-		#		error = (output[:150] + '..')
-		#		self.updateStatus(runid, "error", 20, "Error in farsite: " + error)
-		#		return
-		#except subprocess.CalledProcessError, e:
-		#	self.updateStatus(runid, "error", 20, e.output)
-		#	return
-		#except:
-		#	self.updateStatus(runid, "error", 20, "Error in farsite")
-		#	return
-		self.updateStatus(runid, "running", 20, "Exporteren uitvoer")
+		self.updateStatus(runid, "running", 60, "Exporteren uitvoer")
 		pgserver_host = settings.pgserver_host #'192.168.40.5'
 		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
 		callstring = 'ogr2ogr -f "PostgreSQL" PG:"host='+pgserver_host+' port='+pgserver_port+' user=modeluser dbname=research password=modeluser" -nln result_'+str(runid)+' -lco schema=model_wildfire -lco OVERWRITE=YES '+str(outdir)+'/results.shp'
 		subprocess.call(callstring, shell=True)	
-		
+		print callstring
 		#Simplify the geometry and remove enclave fires
 		query = """
 			DELETE FROM model_wildfire.result_%s WHERE fire_type = 'Enclave Fire';
 			UPDATE model_wildfire.result_%s SET wkb_geometry = ST_SimplifyPreserveTopology(wkb_geometry,10);
 			"""
-		self.updateStatus(runid, "running", 30, "Verwijder enclave fire")
+		self.updateStatus(runid, "running", 60, "Verwijder enclave fire")
 		try:
 			data = (runid, runid, )
 			cur.execute(query, data )
-			self.updateStatus(runid, "running", 40, "Trying")
+			self.updateStatus(runid, "running", 70, "Trying")
 		except e:
-			self.updateStatus(runid, "running", 40, "Caught")
+			self.updateStatus(runid, "running", 70, "Caught")
 		#result = cur.fetchone()
-		self.updateStatus(runid, "running", 50, "Verwerken uitvoer")
+		self.updateStatus(runid, "running", 70, "Verwerken uitvoer")
 		#TODO: error checking
 		#Create layersource
 		curlstring = 'curl -v -u modeluser:modeluser -XPOST -H "Content-type: text/xml" -d "<featureType><name>result_'+str(runid)+'</name></featureType>" http://'+settings.gs_host+':'+settings.gs_port+'/geoserver/rest/workspaces/model_wildfire/datastores/landuse/featuretypes'	

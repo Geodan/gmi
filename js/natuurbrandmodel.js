@@ -2884,7 +2884,6 @@ Ext.onReady(function() {
                             name: 'stepslider',
                             listeners: {
                                 "change":function (slider) {
-                                    //TODO: yuck, this stylemap shouldn't be defined again for every feature
                                     var sliderval = slider.thumbs[0].value;
                                     console.log(sliderval);
                                     Gmi.Session.sliderval = sliderval;
@@ -3356,15 +3355,17 @@ function startModelRun() {
     var t = map.getLayersByName('Stop lines');
     if (t.length > 0 && t[0].features.length > 0) {
         var stopline_layer = t[0];
-        
+        var geomarray = [];
         stopline_layer.features.forEach(function(d){
             var geom = d.geometry.clone();
             for (var i = 0; i < geom.components.length; i++) {
                 geom.components[i].transform('EPSG:900913', 'EPSG:28992');
             }
-            var wkt = geom.toString(); // rd geometry
-            stoplines += wkt;
+            geomarray.push(geom.toString());
+            //var wkt = geom.toString(); // rd geometry
+            //stoplines += wkt;
         });
+        var stoplines = geomarray.join('!'); // rd geometry
         console.log('stop lines', stoplines);
     }
     
@@ -3475,6 +3476,7 @@ function startModelRun() {
             // bewaar runid als terreinid
             Gmi.Session.fireid = out_params.runid;
             showResult(mapPanel.map, out_params.runid);
+            window.setTimeout(function(){drawResult(360);},1000);
             
        },
        success: wpsSuccessCallback,
@@ -3542,7 +3544,7 @@ var wpsSuccessCallback = function(response, options) {
                             } else {
                                 alert(OpenLayers.i18n('Process is ready; results are ignored'));
                             }
-                        } else if (c_options.extraParams.count >= 120) {
+                        } else if (c_options.extraParams.count >= 300) {
                             runner.stop(task);
                             stopProgress();
                             console.log('wfs taak duurde te lang', params);

@@ -2,12 +2,17 @@
 Ext.namespace('Gmi.Control', 'Gmi.Data', 'Gmi.Params', 'Gmi.Services', 'Gmi.Services.WPS', 'Gmi.Session', 'Gmi.Settings');
 
 var drawResult = function(sliderval){
+	var map = mapPanel.map;
     var layer = mapPanel.map.getLayersByName('Brandverspreiding')[0];
+
     layer.features.forEach(function(d){
         var elaps = parseInt(d.attributes.elapsed_mi);
+        var hour = parseInt(d.attributes.hour);
         d.style = {
             strokeColor: 'white',
-            strokeWidth: '1px',
+            strokeWidth: 1,
+            fillOpacity: 0,
+            labelAlign: 'cb',
             fontFamily: "arial, monospace"
         };
         switch (d.attributes.elapsed_mi){
@@ -47,6 +52,11 @@ var drawResult = function(sliderval){
               d.style.strokeWidth = 2;
               d.style.label = elaps.toString();
               break;
+          default:
+          	  d.style.strokeColor = 'white';
+              d.style.fontColor = '#ffdd01';
+              d.style.strokeWidth = 1;
+              d.style.label = '';
         }
         if (elaps > sliderval) {
             d.style.label = "";
@@ -74,6 +84,7 @@ var showResult = function(map,runid){
     var styleMap = new OpenLayers.StyleMap({
         strokeColor: 'white',
         strokeWidth: '1px',
+        fillOpacity: 0,
         label: "${elapsed_mi}",
         fontFamily: "arial, monospace"
     });
