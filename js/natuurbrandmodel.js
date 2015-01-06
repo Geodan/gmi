@@ -81,7 +81,7 @@ Gmi.Settings.decimalSeparator = '.'; // werkt niet met ,
 Gmi.Settings.maxZoomOnMoveToTerrain = 14; // 14 = 1:34K
 Gmi.Settings.weatherDaysBefore = 6;
 Gmi.Settings.weatherDefaults = {station: Gmi.userDefaults.station, tmin: 15, tmax: 30, hmin: 50, hmax: 100, precipitation: 0, speed: 3.3, direction: 225, cloudiness: 0};
-Gmi.Settings.windHours = 6;
+Gmi.Settings.windHours = 12;
 
 Gmi.Session.userid = '0';
 
@@ -113,7 +113,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Edit feature": "Wijzig feature",
     "Edit the land use": "Wijzig landgebruik",
     "Execution": "Uitvoering",
-    "Export shape file": "Exporteer shapefile",
+    "Export results": "Exporteer resultaten",
     "Feature Grid": "Grid",
     "Fire location": "Locatie van brand",
     "Fuel list": "Brandstoflijst",
@@ -1960,8 +1960,15 @@ Ext.onReady(function() {
         measureControl,
         new OpenLayers.Control.ModifyFeature(wildfire_layer, {
             vertexRenderIntent: 'temporary',
+            id: 'modifyfireline',
             displayClass: 'olControlModifyFeature',
-            title: OpenLayers.i18n('Modify existing fire line')
+            title: OpenLayers.i18n('Modify existing fire lines')
+        }),
+        new OpenLayers.Control.ModifyFeature(stopline_layer, {
+            vertexRenderIntent: 'temporary',
+            id: 'modifystopline',
+            displayClass: 'olControlModifyFeature',
+            title: OpenLayers.i18n('Modify existing stoplines')
         }),
         /*new OpenLayers.Control.DrawFeature(wildfire_layer, OpenLayers.Handler.Point, {
             displayClass: 'olControlDrawFeaturePoint'
@@ -1990,7 +1997,25 @@ Ext.onReady(function() {
         new OpenLayers.Control.Zoom({title: OpenLayers.i18n('Change zoom')}),
         new OpenLayers.Control.ScaleLine({bottomOutUnits: '', bottomInUnits: '', title: OpenLayers.i18n('Scale line'), geodesic: true}),
         //new OpenLayers.Control.Permalink(), // todo: uitzoeken werking geoext met permalink
-        toolbar
+        toolbar,
+        new OpenLayers.Control.SelectFeature(wildfire_layer, {
+            vertexRenderIntent: 'temporary',
+            id: 'select1',
+            title: OpenLayers.i18n('Remove existing fire lines'),
+            onSelect: function(feature){
+            	this.layer.removeFeatures(feature);
+            	this.deactivate();
+            }
+        }),
+        new OpenLayers.Control.SelectFeature(stopline_layer, {
+            vertexRenderIntent: 'temporary',
+            id: 'select2',
+            title: OpenLayers.i18n('Remove existing stoplines'),
+            onSelect: function(feature){
+            	this.layer.removeFeatures(feature);
+            	this.deactivate();
+            }
+        })
     ];
     map_controls.push(nav = new OpenLayers.Control.NavigationHistory({
         //displayClass: 'olControlCustomToolbar'
@@ -2782,25 +2807,68 @@ Ext.onReady(function() {
                         {
                             xtype: 'fieldset',
                             title: OpenLayers.i18n('Fire location'),
+                            layout:'table',
                             defaults: {
                                 width: 'inherited'
                             },
+                            layoutConfig: {
+								// The total column count must be specified here
+								columns: 3
+							},
                             items: [
-                                new Ext.Button({
-                                    text: OpenLayers.i18n('Draw fire line'),
-                                    handler: drawFireLine,
-                                    cls: 'g-actie-knop'
-                                }),
-                                new Ext.Button({
-                                    text: OpenLayers.i18n('Draw stop line'),
-                                    handler: drawStopLine,
-                                    cls: 'g-actie-knop'
-                                }),
-                                new Ext.Button({
-                                    text: OpenLayers.i18n('Copy fire extent'),
-                                    handler: copyFireLine,
-                                    cls: 'g-actie-knop'
-                                })
+                            	{
+									html: '<p>Fireline</p>',
+									colspan: 3
+								},
+								new Ext.Button({
+									text: OpenLayers.i18n('Draw'),
+									handler: drawFireLine,
+									cls: 'g-actie-knop',
+									width: 'inherited'
+								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Edit'),
+									handler: function(){
+										mapPanel.map.getControlsBy('id','modifyfireline')[0].activate();
+									},
+									cls: 'g-actie-knop'
+								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Remove'),
+									handler: removeFireLine,
+									cls: 'g-actie-knop'
+								}),
+								{
+									html: '<p>Stopline</p>',
+									colspan: 3
+								},
+								new Ext.Button({
+									text: OpenLayers.i18n('Draw'),
+									handler: drawStopLine,
+									cls: 'g-actie-knop'
+								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Edit'),
+									handler: function(){
+										mapPanel.map.getControlsBy('id','modifystopline')[0].activate();
+									},
+									cls: 'g-actie-knop'
+								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Remove'),
+									handler: removeStopLine,
+									cls: 'g-actie-knop'
+								}),
+								{
+									html: '<p> </p>',
+									colspan: 3
+								},
+								new Ext.Button({
+									text: OpenLayers.i18n('Copy fire extent'),
+									colspan: 3,
+									handler: copyFireLine,
+									cls: 'g-actie-knop'
+								})
                             ]
                         }, {
                             xtype: 'fieldset',
@@ -2924,14 +2992,16 @@ Ext.onReady(function() {
                                                 title: OpenLayers.i18n('Warning')
                                             });
                                         } else {
+                                        	var layername = layers[0].protocol.featurePrefix + ':'+layers[0].protocol.featureType;
                                             var url = '/geoserver/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=' +
-                                                layers[0].params['LAYERS'] + '&maxFeatures=1000&outputFormat=SHAPE-ZIP';
-                                        
+                                                layername + '&maxFeatures=1000&outputFormat=SHAPE-ZIP';
+                                            var wmsurl = '/geoserver/ows?service=WMS&version=1.1.1&request=GetCapabilities&namespace=' +
+                                                layers[0].protocol.featurePrefix + '';
                                             Ext.MessageBox.show({
                                                 //msg: '<a target="_blank" href="' + url + '">' + OpenLayers.i18n('Click here to download the shapefile') + '</a>',
-                                                msg: '<a href="#" onclick="javascript:Gmi.downloadOnClick(\'' + url + '\')">' + OpenLayers.i18n('Click here to download the shapefile') + '</a>',
+                                                msg: '<center><a href="#" onclick="javascript:Gmi.downloadOnClick(\'' + url + '\')">' + OpenLayers.i18n('Click here to download the shapefile') + '</a> <br>or copy the <br><a href="'+wmsurl+'">WMS link</a> <br>and add the following layer <br><pre>'+layers[0].protocol.featureType+'</pre></center>',
                                                 width: 300,
-                                                title: OpenLayers.i18n('Export shape file')
+                                                title: OpenLayers.i18n('Export results')
                                             });
                                         }
                                     },
@@ -3285,7 +3355,8 @@ function windStoreAsString() {
 function drawFireLine() {
     // drawfeature knop activeren
     var map = mapPanel.map;
-    map.getLayersByName('Wildfire lines')[0].removeAllFeatures();
+    //var layer = map.getLayersByName('Wildfire lines')[0];
+    //layer.removeAllFeatures();
     var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
     if (toolbar.length > 0) {
         //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
@@ -3295,12 +3366,21 @@ function drawFireLine() {
             toolbar[0].activateControl(controls[0]);
         }
     }
+    
 };
+
+function removeFireLine(){
+	var map = mapPanel.map;
+	var control = map.getControlsBy('id','select1');
+	if (control[0]){
+		control[0].activate();
+	}
+}
 
 function drawStopLine() {
     // drawfeature knop activeren
     var map = mapPanel.map;
-    map.getLayersByName('Stop lines')[0].removeAllFeatures();
+    //map.getLayersByName('Stop lines')[0].removeAllFeatures();
     var toolbar = map.getControlsBy('displayClass', 'olControlEditingToolbar');
     if (toolbar.length > 0) {
         //var controls = map.getControlsByClass(OpenLayers.Control.DrawFeature);
@@ -3312,10 +3392,18 @@ function drawStopLine() {
     }
 };
 
+function removeStopLine(){
+	var map = mapPanel.map;
+	var control = map.getControlsBy('id','select2');
+	if (control[0]){
+		control[0].activate();
+	}
+}
+
 function copyFireLine() {
 	//Copies the currently available model result at the specified time
 	//TODO: check for valid sliderval and result input
-	drawFireLine(); 
+	//drawFireLine(); 
 	var map = mapPanel.map;
     var sliderval = Gmi.Session.sliderval;
 	var layer = map.getLayersByName('Brandverspreiding')[0];
@@ -3324,8 +3412,9 @@ function copyFireLine() {
 	layer.features.forEach(function(d){
 		var elaps = parseInt(d.attributes.elapsed_mi);
 		if (elaps == sliderval) {
-			d.style = null;
-			drawlayer.features.push(d);
+			var feature = d.clone();
+			feature.style = null;
+			drawlayer.features.push(feature);
 		}
 	});
     drawlayer.redraw();
