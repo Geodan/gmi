@@ -206,7 +206,7 @@ Gmi.defineResultsWfsGrid = function() {
         //}),
         autoLoad: true
     });
-    console.log('Store', store);
+    
     // create grid panel configured with feature store
     gridPanel = new Ext.grid.GridPanel({
         title: OpenLayers.i18n("Feature Grid"),
@@ -238,7 +238,7 @@ Gmi.defineResultsWfsGrid = function() {
     gridPanel.store.bind(wfsLayer);
     gridPanel.getSelectionModel().bind(wfsLayer);
     gridPanel.getSelectionModel().on('rowdeselect_NIET', function (obj, rowIndex, row) {
-        console.log('rowdeselect', row.data.feature);
+        //console.log('rowdeselect', row.data.feature);
         /*
         Gmi.Session.fuelid = null;
         Gmi.Session.datetime = null;
@@ -247,7 +247,7 @@ Gmi.defineResultsWfsGrid = function() {
         */
     });
     gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
-        console.log('rowselect', row.data.feature);
+        //console.log('rowselect', row.data.feature);
         
         //Someday someone will chop my hands off for this code.....
         Gmi.Session.terraingrid.store.data.items.forEach(function(d,i){ 

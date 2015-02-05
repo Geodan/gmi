@@ -1052,6 +1052,7 @@ var weatherColumnModel = new Ext.grid.ColumnModel({
             allowBlank: false,
             decimalSeparator: Gmi.Settings.decimalSeparator,
             maxLength: 5,
+            maxValue: 50,
             minValue: 0
         }),
         dataIndex: 'wind'
@@ -1230,7 +1231,7 @@ Ext.data.LocalStorageWriter = Ext.extend(Ext.data.DataWriter, {
      * @return {Object}
      */
     createRecord : function(rec) {
-       console.log('createRecord', rec);
+       //console.log('createRecord', rec);
        return this.toHash(rec);
     },
     
@@ -1241,7 +1242,7 @@ Ext.data.LocalStorageWriter = Ext.extend(Ext.data.DataWriter, {
      * @return {Object}
      */
     updateRecord : function(rec) {
-        console.log('updateRecord', rec);
+        //console.log('updateRecord', rec);
         Ext.apply(this, {
             meta: {
                 idProperty: 'id'
@@ -1288,7 +1289,7 @@ var weatherStore = new Ext.data.Store({
         readRecords: function() {
             if (weatherStore.modified.length > 0) {
                 // eerst opslaan store indien er gewijzigde records zijn
-                console.log('modified', weatherStore.modified);
+                //console.log('modified', weatherStore.modified);
                 var dataset = [];
                 for (var i = 0; i < weatherStore.modified.length; i++) {
                     dataset.push(weatherStore.modified[i].data);
@@ -1335,7 +1336,7 @@ var windStore = new Ext.data.Store({
         readRecords: function() {
             if (windStore.modified.length > 0) {
                 // eerst opslaan store indien er gewijzigde records zijn
-                console.log('modified', windStore.modified);
+                //console.log('modified', windStore.modified);
                 var dataset = [];
                 for (var i = 0; i < windStore.modified.length; i++) {
                     dataset.push(windStore.modified[i].data);
@@ -1436,7 +1437,7 @@ var weathersettingsWindow = new Ext.Window({
                     Ext.getCmp('weatherstation').setValue(event.data.id);
                     weatherStore.loadData();
                     windStore.loadData();
-                    console.log('select weather station', arguments);
+                    //console.log('select weather station', arguments);
                     
                     // update user defaults
                     Gmi.updateUserDefaults({station: event.data.id});
@@ -1519,13 +1520,13 @@ Gmi.checkModelDatesInStores = function() {
     if (!Gmi.checkDateInStoreData(weatherStore, [model_date, new Date(model_date).increment(-Gmi.Settings.weatherDaysBefore)])) {
         // forceer opnieuw opvragen
         weatherStore.clearData();
-        console.log('model_date valt buiten data range voor weatherStore');
+        console.warn('model_date valt buiten data range voor weatherStore');
     }
     var model_datetime = getModelDateTime();
     if (!Gmi.checkDateInStoreData(windStore, [model_datetime, new Date(model_datetime).increment(Gmi.Settings.windHours/24)])) {
         // forceer opnieuw opvragen
         windStore.clearData();
-        console.log('model_date valt buiten data range voor windStore');
+        console.warn('model_date valt buiten data range voor windStore');
     }
 };
 
@@ -1652,7 +1653,7 @@ Ext.onReady(function() {
             }),
             autoLoad: true
         });
-        console.log('Store', store);
+        //console.log('Store', store);
         // create grid panel configured with feature store
         gridPanel = new Ext.grid.GridPanel({
             title: OpenLayers.i18n("Feature Grid"),
@@ -1684,7 +1685,7 @@ Ext.onReady(function() {
         gridPanel.store.bind(wfsLayer);
         gridPanel.getSelectionModel().bind(wfsLayer);
         gridPanel.getSelectionModel().on('rowdeselect_NIET', function (obj, rowIndex, row) {
-            console.log('rowdeselect', row.data.feature);
+            //console.log('rowdeselect', row.data.feature);
             
             Gmi.Session.fuelid = null;
             Gmi.Session.datetime = null;
@@ -1692,7 +1693,7 @@ Ext.onReady(function() {
             setBox(mapPanel.map, null);
         });
         gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
-            console.log('rowselect', row.data.feature);
+            //console.log('rowselect', row.data.feature);
             var geom = row.data.feature.geometry;
             var center = geom.getCentroid();
             var bounds = geom.getBounds();
@@ -1788,7 +1789,11 @@ Ext.onReady(function() {
             },
             featureadded: function(event) {
                 // event = type, element, feature, object (layer)
-                console.log('featureadded', event.feature);
+                //console.log('featureadded', event.feature);
+                if (event.feature.geometry.components.length <= 2){
+                	alert(OpenLayers.i18n('Line needs more than 2 points!'));
+                	event.feature.destroy();
+                }
             },
             scope: wildfire_layer
         }
@@ -1822,7 +1827,11 @@ Ext.onReady(function() {
             },
             featureadded: function(event) {
                 // event = type, element, feature, object (layer)
-                console.log('featureadded', event.feature);
+                //console.log('featureadded', event.feature);
+                if (event.feature.geometry.components.length <= 2){
+                	alert(OpenLayers.i18n('Line needs more than 2 points!'));
+                	event.feature.destroy();
+                }
             },
             scope: stopline_layer
         }
@@ -1918,22 +1927,22 @@ Ext.onReady(function() {
     // Update content in .foo div   
     measureControl.events.on({
         'deactivate': function(evt) {
-            console.log('deactivate', evt);
+            //console.log('deactivate', evt);
             measureTip.hide();
         },
         'measure': function(evt) {
             //$('.foo').html();
-            console.log('measure', evt);
+            //console.log('measure', evt);
             var distanceMsg = measureControl.getCustomLength(evt, true);
             measureTip.show(distanceMsg);
             console.log('afstand', distanceMsg);
         },
         'measurepartial': function(evt) {
             //$('.foo').html(measureControl.getCustomLength(evt, false));
-            console.log('measurepartial', evt);
+            //console.log('measurepartial', evt);
             var distanceMsg = measureControl.getCustomLength(evt, false);
             measureTip.show(distanceMsg);
-            console.log('afstand', distanceMsg);
+            //console.log('afstand', distanceMsg);
         }
     });
 
@@ -1942,7 +1951,7 @@ Ext.onReady(function() {
     var toolbar = new OpenLayers.Control.Panel({
         displayClass: 'olControlEditingToolbar',
         activateControl: function(c) {
-            console.log('activate control', c);
+            //console.log('activate control', c);
             if (c.CLASS_NAME === 'OpenLayers.Control.ModifyFeature') {
                 if (c.layer.features.length > 0) {
                     c.selectFeature(c.layer.features[0]);
@@ -2267,7 +2276,7 @@ Ext.onReady(function() {
             'click': function(node, event) {
                 if (jQuery(event.target).hasClass('gx-tree-layer-icon') || jQuery(event.target).hasClass('gx-tree-baselayer-icon')) {
                     // toggle legendgraphic
-                    console.log('toggle legendgraphic', node);
+                    //console.log('toggle legendgraphic', node);
                     var legendGraphicUrl = null;
                     if (jQuery('.g-legendgraphic', event.target.parentNode.parentNode).length >= 1) {
                         jQuery('.g-legendgraphic', event.target.parentNode.parentNode).remove();
@@ -2378,7 +2387,7 @@ Ext.onReady(function() {
                             enableToggle: true,
                             tooltip: OpenLayers.i18n("Select region by dragging a rectangle in the map"),
                             handler: function(b, e) {
-                                console.log('select region handler', b.pressed);
+                                //console.log('select region handler', b.pressed);
                                 var map = mapPanel.map;
                                 if (b.pressed) {
                                     var control = new OpenLayers.Control();
@@ -2413,7 +2422,7 @@ Ext.onReady(function() {
                                                         );
                                                         var geom = bounds.toGeometry();
                                                         var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
-                                                        console.log('moveBox', bounds, area, area > Gmi.Settings.maxArea ? 'TOO LARGE' : '');
+                                                        //console.warn('moveBox', bounds, area, area > Gmi.Settings.maxArea ? 'TOO LARGE' : '');
                                                         measureTip.show(area > Gmi.Settings.maxArea ? OpenLayers.i18n('Too large') : OpenLayers.i18n('Area ${area}', {area: areaWithUnit(area)}))
                                                     }/*,
                                                     endBox: function(end) {
@@ -2448,7 +2457,7 @@ Ext.onReady(function() {
                                                 }));
                                                 //return;
                                             } else {
-                                                console.log('area', area);
+                                                //console.log('area', area);
 
                                                 setBox(map, bounds);
                                                 
@@ -2478,7 +2487,7 @@ Ext.onReady(function() {
                             enableToggle: true,
                             tooltip: OpenLayers.i18n("Select region by dragging a rectangle in the map"),
                             handler: function(b, e) {
-                                console.log('select region handler', b.pressed);
+                                //console.log('select region handler', b.pressed);
                                 var map = mapPanel.map;
                                 if (b.pressed) {
                                     var control = new OpenLayers.Control();
@@ -2513,7 +2522,7 @@ Ext.onReady(function() {
                                                         );
                                                         var geom = bounds.toGeometry();
                                                         var area = geom.getArea(); // or getGeodesicArea('EPSG:900913')
-                                                        console.log('moveBox', bounds, area, area > Gmi.Settings.maxArea ? 'TOO LARGE' : '');
+                                                        console.warn('moveBox', bounds, area, area > Gmi.Settings.maxArea ? 'TOO LARGE' : '');
                                                         measureTip.show(area > Gmi.Settings.maxArea ? OpenLayers.i18n('Too large') : OpenLayers.i18n('Area ${area}', {area: areaWithUnit(area)}))
                                                     }/*,
                                                     endBox: function(end) {
@@ -2548,7 +2557,7 @@ Ext.onReady(function() {
                                                 }));
                                                 //return;
                                             } else {
-                                                console.log('area', area);
+                                                //console.log('area', area);
 
                                                 setBox(map, bounds);
                                                 
@@ -2694,7 +2703,7 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
-                            id: 'result-fieldset',
+                            id: 'subset-fieldset',
                             title: OpenLayers.i18n('Saved terrains'),
                             defaults: {
                                 width: 'inherited'
@@ -2922,7 +2931,7 @@ Ext.onReady(function() {
                     items: [
                         {
                             xtype: 'fieldset',
-                            id: 'subset-fieldset',
+                            id: 'result-fieldset',
                             title: OpenLayers.i18n('Saved results'),
                             defaults: {
                                 width: 'inherited'
@@ -2968,7 +2977,7 @@ Ext.onReady(function() {
                             listeners: {
                                 "change":function (slider) {
                                     var sliderval = slider.thumbs[0].value;
-                                    console.log(sliderval);
+                                    //console.log(sliderval);
                                     Gmi.Session.sliderval = sliderval;
                                     var time = new Date(Gmi.Session.datetime);
                                     time.setMinutes(Gmi.Session.datetime.getMinutes() + sliderval);
@@ -3030,11 +3039,17 @@ Ext.onReady(function() {
     var viewportItems = [mapPanel, tree, modelPanel];
     
     //TT added this to preload terrainstore
-	var comp = Ext.getCmp('result-fieldset');
+	var comp = Ext.getCmp('subset-fieldset');
 	var wfsGrid = Gmi.defineTerrainWfsGrid();
 	Gmi.Session.terraingrid = wfsGrid;
 	comp.add( wfsGrid );
     
+	//TT added this to preload resultstore
+	var comp = Ext.getCmp('result-fieldset');
+	var wfsGrid = Gmi.defineResultsWfsGrid();
+	//??Gmi.Session.resultgrid = wfsGrid;
+	comp.add( wfsGrid );
+	
 	new Ext.Viewport({
         layout: "fit",
         hideBorders: true,
@@ -3045,6 +3060,10 @@ Ext.onReady(function() {
         }
     });
     
+    
+    
+    
+	    
     // toevoegen van stappen aan rechterkant (simPanel)
  
     var button = Ext.get('show-btn');
@@ -3170,7 +3189,7 @@ Ext.onReady(function() {
                 // set date (todo: alleen indien veranderd)
                 Ext.getCmp('model_date').setValue(today);
                 // tijd in formulier aanpassen
-                console.log(today.toLocaleTimeString());
+                //console.log(today.toLocaleTimeString());
                 Ext.getCmp('model_time').setValue( zpad(h, 2) + ':' + zpad(m_floor, 2) );
                 prev_minutes = m_floor;
             }
@@ -3330,7 +3349,7 @@ function weatherStoreAsString() {
             weatherString += ',(' + month + ',' + day + ',' + lastDataValues + ')'; 
         }
     }
-    console.log('weatherString', weatherString);
+    //console.log('weatherString', weatherString);
     return weatherString;
 };
 
@@ -3369,7 +3388,7 @@ function windStoreAsString() {
     if (last_date) {
         windString += ',(' + last_date.dateFormat('m,d,Hi') + ',' + lastDataValues + ')';
     }
-    console.log('windString', windString);
+    //console.log('windString', windString);
     return windString;
 };
 
@@ -3476,7 +3495,7 @@ function startModelRun() {
             //stoplines += wkt;
         });
         var stoplines = geomarray.join('!'); // rd geometry
-        console.log('stop lines', stoplines);
+        //console.log('stop lines', stoplines);
     }
     
     
@@ -3502,7 +3521,7 @@ function startModelRun() {
         geomarray.push(geom.toString());
     });
     var wkt = geomarray.join('!'); // rd geometry
-    console.log('fire line', wkt);
+    //console.log('fire line', wkt);
     //return;
 /*    
     var rdbox = Gmi.Session.box.clone().transform('EPSG:900913', 'EPSG:28992');
@@ -3564,7 +3583,7 @@ function startModelRun() {
         RawDataOutput: 'string',
         mimeType: 'application/json'
     };
-    console.log('run params', run_params);
+    //console.log('run params', run_params);
     if (Gmi.Settings.debug) {
         if (! confirm(OpenLayers.i18n('Model parameters: \n\n${params}', {params: JSON.stringify(run_params, null, 2)}))) {
             return;
@@ -3600,7 +3619,7 @@ var wpsFailureCallback = function(response, options) {
 };
 
 var wpsSuccessCallback = function(response, options) {
-    console.log('wpsSuccessCallback response', response, options);
+    //console.log('wpsSuccessCallback response', response, options);
     
     var params = JSON.parse(response.responseText);
     var activerunid = params.runid;
@@ -3643,7 +3662,7 @@ var wpsSuccessCallback = function(response, options) {
                         if (params.status === 'error') {
                             runner.stop(task); 
                             stopProgress();
-                            console.log('wfs taak ging fout', params);
+                            console.warn('wfs taak ging fout', params);
                             alert(OpenLayers.i18n('WFS process error: ${msg}', {msg: params.lastmessage}));
                         } else if (params.percentage == 100) {
                             runner.stop(task); 
@@ -3657,17 +3676,17 @@ var wpsSuccessCallback = function(response, options) {
                         } else if (c_options.extraParams.count >= 300) {
                             runner.stop(task);
                             stopProgress();
-                            console.log('wfs taak duurde te lang', params);
+                            console.warn('wfs taak duurde te lang', params);
                             alert(OpenLayers.i18n('Process takes too long; aborted'));
                         } else {
                             updateProgress(c_options.extraParams.count, params.percentage);
-                            console.log('voortgang', c_options.extraParams.count, params);
+                            //console.log('voortgang', c_options.extraParams.count, params);
                         }
                     },
                     failure: function() {
                         stopProgress();
                         runner.stop(task);
-                        console.log('WFS process failure', arguments);
+                        console.warn('WFS process failure', arguments);
                         alert(OpenLayers.i18n('WFS process failure'));
                     }
                 });
@@ -3954,7 +3973,7 @@ function start_edit_subset(map) {
                         listeners: {
                             'select': function() {
                                     //not_implemented();
-                                    console.log('select fuel_list')
+                                    //console.log('select fuel_list')
                                 }
                         }
                     }),
@@ -3980,7 +3999,7 @@ function start_edit_subset(map) {
             // is closed
             popup.on({
                 close: function() {
-                    console.log('close popup');
+                    //console.log('close popup');
                     popup = null;
                     /*var vectorLayer = this.feature.layer;
                     if (OpenLayers.Util.indexOf(vectorLayer.selectedFeatures,
@@ -4021,7 +4040,7 @@ function start_edit_subset(map) {
         styleMap: styleMap,
         eventListeners: {
             featureselected: function(evt) {
-                console.log('feature selected', evt.feature);
+                //console.log('feature selected', evt.feature);
                 createPopup(evt.feature);
             }
         },
@@ -4070,9 +4089,9 @@ function stop_edit_subset(map) {
     for (var i = 0; i < controls.length; i++) {
         if (controls[i].layer === wfs_layer) {
             map.removeControl(controls[i]);
-            console.log('wfs control removed');
+            //console.log('wfs control removed');
         }
     }
     map.removeLayer(wfs_layer);
-    console.log('wfs layer removed');
+    //console.log('wfs layer removed');
 };
