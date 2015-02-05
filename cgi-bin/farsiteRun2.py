@@ -136,12 +136,12 @@ class farsiteRun():
 		cfg.addWindFname(os.path.join(outdir, 'WIND.WND'))
 		cfg.setLandscapeFname(os.path.join(outdir, 'LANDSCAPE.LCP'))
 		cfg.setAdjustmentFname(os.path.join(settings.defaults_path, 'Factor_1.ADJ'))
-		bpd = BurnPeriodDataset()
-		bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay)-2))
-		bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay)-1))
-		bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay),800,2359))
-		bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay),800,2359))
-		cfg.setBurnPeriodData(bpd)
+		#bpd = BurnPeriodDataset()
+		#bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay)-2))
+		#bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay)-1))
+		#bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay),800,2359))
+		#bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay),800,2359))
+		#cfg.setBurnPeriodData(bpd)
 		#cfg.setBurnPeriodFname(os.path.join(indir, 'ashley.bpd'))
 		
 		print 'setup model parameters'
@@ -171,7 +171,7 @@ class farsiteRun():
 
 		print 'duration options'
 		dur = DurationOptions()
-		dur.setConditioning(int(startMonth),int(startDay) -5 )
+		dur.setConditioning(int(startMonth),int(startDay) - 5 )
 		dur.setStart(int(startMonth), int(startDay), int(startHour[:2]), int(startHour[2:]))
 		dur.setStop( int(endMonth), int(endDay), int(endHour[:2]), int(endHour[2:]))
 		cfg.setDuration(dur)

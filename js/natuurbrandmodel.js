@@ -85,6 +85,7 @@ Gmi.Settings.windHours = 12;
 
 Gmi.Session.userid = '0';
 
+
 OpenLayers.imgPath = Gmi.Settings.openLayers_imgPath;
 OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
 
@@ -2813,12 +2814,12 @@ Ext.onReady(function() {
                             },
                             layoutConfig: {
 								// The total column count must be specified here
-								columns: 3
+								columns: 4
 							},
                             items: [
                             	{
 									html: '<p>Fireline</p>',
-									colspan: 3
+									colspan: 4
 								},
 								new Ext.Button({
 									text: OpenLayers.i18n('Draw'),
@@ -2838,9 +2839,22 @@ Ext.onReady(function() {
 									handler: removeFireLine,
 									cls: 'g-actie-knop'
 								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Remove all'),
+									handler: function(){
+										mapPanel.map.getLayersByName('Wildfire lines')[0].removeAllFeatures();
+									},
+									cls: 'g-actie-knop'
+								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Copy current extent'),
+									colspan: 4,
+									handler: copyFireLine,
+									cls: 'g-actie-knop'
+								}),
 								{
 									html: '<p>Stopline</p>',
-									colspan: 3
+									colspan: 4
 								},
 								new Ext.Button({
 									text: OpenLayers.i18n('Draw'),
@@ -2859,16 +2873,17 @@ Ext.onReady(function() {
 									handler: removeStopLine,
 									cls: 'g-actie-knop'
 								}),
+								new Ext.Button({
+									text: OpenLayers.i18n('Remove all'),
+									handler: function(){
+										mapPanel.map.getLayersByName('Stop lines')[0].removeAllFeatures();
+									},
+									cls: 'g-actie-knop'
+								}),
 								{
 									html: '<p> </p>',
-									colspan: 3
-								},
-								new Ext.Button({
-									text: OpenLayers.i18n('Copy fire extent'),
-									colspan: 3,
-									handler: copyFireLine,
-									cls: 'g-actie-knop'
-								})
+									colspan: 4
+								}
                             ]
                         }, {
                             xtype: 'fieldset',
@@ -3014,7 +3029,13 @@ Ext.onReady(function() {
             });
     var viewportItems = [mapPanel, tree, modelPanel];
     
-    new Ext.Viewport({
+    //TT added this to preload terrainstore
+	var comp = Ext.getCmp('result-fieldset');
+	var wfsGrid = Gmi.defineTerrainWfsGrid();
+	Gmi.Session.terraingrid = wfsGrid;
+	comp.add( wfsGrid );
+    
+	new Ext.Viewport({
         layout: "fit",
         hideBorders: true,
         items: {
@@ -3276,7 +3297,7 @@ function weatherStoreAsString() {
     for (var i = 0; i < weatherData.length; i++) {
         weatherData[i].data.hour1 = 500;
         weatherData[i].data.hour2 = 1500; // eis: hour1 < hour2
-        weatherData[i].data.precipitation = 0;
+        weatherData[i].data.precipitation = 0; //TODO: precipitation >0 makes farsite stall
         
         lastDate = new Date(weatherData[i].data.date); // clone!
         
@@ -3414,7 +3435,7 @@ function copyFireLine() {
 		if (elaps == sliderval) {
 			var feature = d.clone();
 			feature.style = null;
-			drawlayer.features.push(feature);
+			drawlayer.addFeatures(feature);
 		}
 	});
     drawlayer.redraw();

@@ -1,4 +1,5 @@
 
+
 Ext.namespace('Gmi.Control', 'Gmi.Data', 'Gmi.Params', 'Gmi.Services', 'Gmi.Services.WPS', 'Gmi.Session', 'Gmi.Settings');
 
 var drawResult = function(sliderval){
@@ -137,6 +138,7 @@ Gmi.invalidateResultWfsGrid = function() {
         // ophalen, want fieldset al open
         Gmi.defineResultsWfsGrid();
     }
+    Gmi.Session.terraingrid.store.reload();
 };
     
 Gmi.defineResultsWfsGrid = function() {
@@ -247,7 +249,12 @@ Gmi.defineResultsWfsGrid = function() {
     gridPanel.getSelectionModel().on('rowselect', function (obj, rowIndex, row){
         console.log('rowselect', row.data.feature);
         
-         
+        //Someday someone will chop my hands off for this code.....
+        Gmi.Session.terraingrid.store.data.items.forEach(function(d,i){ 
+        	if (d.data.feature.attributes.terrein_id == row.data.feature.attributes['terrein_id']){
+        		Gmi.Session.terraingrid.selModel.selectRow(i);
+        	}
+        }); 
         
         //var geom = row.data.feature.geometry;
         //var center = geom.getCentroid();
@@ -287,12 +294,7 @@ Gmi.defineResultsWfsGrid = function() {
         //showTerrein(mapPanel.map, row.data.feature.attributes['terrein_id']);
         showResult(mapPanel.map, row.data.feature.attributes['run_id']);
         var index = -1;
-        //Someday someone will chop my hands off for this code.....
-        Gmi.Session.terraingrid.store.data.items.forEach(function(d,i){ 
-        	if (d.data.feature.attributes.terrein_id == row.data.feature.attributes['terrein_id']){
-        		Gmi.Session.terraingrid.selModel.selectRow(i);
-        	}
-        });
+        
         
         
         /*
