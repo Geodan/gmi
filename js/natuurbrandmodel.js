@@ -3577,7 +3577,7 @@ function startModelRun() {
             // startmonth=05;startday=16;starthour=1508;
             startmonth: zpad(model_datetime.getMonth() + 1, 2), // 0-padded; month geeft 0..11
             startday: zpad(model_datetime.getDate(), 2), // 0-padded, laatste dag van weather/wind-string
-            starthour: hhmm, // hhmm,
+            starthour: zpad(hhmm,4), // hhmm,
             stoplines: stoplines
         }, ';'),
         RawDataOutput: 'string',

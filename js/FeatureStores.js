@@ -266,8 +266,9 @@ Gmi.defineResultsWfsGrid = function() {
         //Set the model-time as start time
         var month = row.data.feature.attributes['startmonth'];
         var day = row.data.feature.attributes['startday'];
-        var hour = row.data.feature.attributes['starthour'].substring(0,2);
-        var minutes = row.data.feature.attributes['starthour'].substring(2);
+        var starthour = zpad(row.data.feature.attributes['starthour'],4);
+        var hour = starthour.substring(0,2);
+        var minutes = starthour.substring(2);
         var datestring = '2014-'+ month + '-'+day+ ','+hour+':'+minutes; 
         var datetime = new Date(datestring);
         Gmi.Session.datetime = datetime;
