@@ -2741,6 +2741,7 @@ Ext.onReady(function() {
                                 {
                                     xtype: 'timefield',
                                     id: 'model_time',
+                                    msgTarget: 'under',
                                     fieldLabel: OpenLayers.i18n("Time"),
                                     anchor: '100%',
                                     forceSelection: true, editable: false,
@@ -3458,6 +3459,10 @@ function copyFireLine() {
 		}
 	});
     drawlayer.redraw();
+    
+    //Warn for possible time change
+    var cmp = Ext.getCmp('model_time');
+    cmp.markInvalid(OpenLayers.i18n('Change time!'));
 };
 
 
