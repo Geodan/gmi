@@ -10,6 +10,9 @@
 # Short-Description: Start docker containers.
 # Description:       Start the dockercontainers.
 ### END INIT INFO
+
+#See /etc/rc.local or add this command there /opt/gmi/dockerfiles/onboot.sh
+
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="Run onboot"
 NAME=onboot
