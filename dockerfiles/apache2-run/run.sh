@@ -5,5 +5,6 @@ mkdir -p  /var/data/wildfire/fires
 mkdir -p  /var/data/wildfire/fuelmodels
 chown www-data /var/data/wildfire/fires
 chown www-data /var/data/wildfire/fuelmodels
-cp /var/www/main/gmi/cgi-bin/libfarsite.so /usr/lib/libfarsite.so
+cd /farsite-python
+python setup.py install
 /usr/sbin/apachectl -DFOREGROUND
