@@ -3608,6 +3608,10 @@ function startModelRun() {
             Gmi.invalidateResultWfsGrid();
             // toevoegen van kaartlaag met naam als model_wildfire:result_1769
             // bewaar runid als terreinid
+            /* TODO!!: Set the Gmi.Session.datetime;
+            var cmp = Ext.getCmp('model_time')
+            var time = cmp.getValue();
+            */
             Gmi.Session.fireid = out_params.runid;
             showResult(mapPanel.map, out_params.runid);
             window.setTimeout(function(){drawResult(360);},1000);
