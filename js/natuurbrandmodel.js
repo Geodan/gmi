@@ -66,7 +66,7 @@ if (location.host === 'brand.localhost') {
 Gmi.userDefaults = localStorage['userDefaults'];
 if (typeof Gmi.userDefaults === 'undefined') {
     Gmi.userDefaults = {
-        station: 275 // Deelen
+        station: 0 // Own data
     };
 } else {
     Gmi.userDefaults = JSON.parse(Gmi.userDefaults);
