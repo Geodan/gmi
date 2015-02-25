@@ -163,20 +163,20 @@ SELECT AddRasterConstraints('model_wildfire', 'ahn1_%(runid)s'::name, 'rast'::na
 		print('starting gdal')
 		#FUEL
 		sys.stdout.flush()
-		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=fuelmodel_"+str(runid)+"\" "+ self.output_path + "/fuelmodel.asc", shell=True)      
+		subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=fuelmodel_"+str(runid)+"\" "+ self.output_path + "/fuelmodel.asc", shell=True)      
 		#ELEV
-		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=ahn1_"+str(runid)+"\" " + self.output_path + "/ahn1.asc", shell=True)
+		#subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=ahn1_"+str(runid)+"\" " + self.output_path + "/ahn1.asc", shell=True)
 		#SLOPE
-		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=slope_"+str(runid)+"\" " + self.output_path + "/slope.asc", shell=True)
+		#subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=slope_"+str(runid)+"\" " + self.output_path + "/slope.asc", shell=True)
 		#ASPECT
-		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=aspect_"+str(runid)+"\" " + self.output_path + "/aspect.asc", shell=True)
+		#subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=aspect_"+str(runid)+"\" " + self.output_path + "/aspect.asc", shell=True)
 		#EMPTY RASTER
-		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=emptyraster_"+str(runid)+"\" " + self.output_path + "/emptyraster.asc", shell=True)
+		subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=emptyraster_"+str(runid)+"\" " + self.output_path + "/emptyraster.asc", shell=True)
 		#Some unneeded steps
-		#subprocess.call(self.gdal_translate_path + " -of GTiff  " + self.output_path+ "/fuelmodel.asc " + self.output_path + "/fuelmodel.tiff", shell=True)
+		#subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of GTiff  " + self.output_path+ "/fuelmodel.asc " + self.output_path + "/fuelmodel.tiff", shell=True)
 		#subprocess.call(self.gdalwarp_path + " -overwrite -s_srs epsg:28992 -t_srs epsg:900913 " + self.output_path + "/fuelmodel.tiff " + self.output_path + "/fuelmodel_900913.tiff", shell=True)
-		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=ahn1_"+str(runid)+"\" " + self.output_path + "/ahn1.asc", shell=True)
-		#subprocess.call(self.gdal_translate_path + " -a_nodata -999 -of GTiff  " + self.output_path + "/ahn1.asc " + self.output_path + "/ahn1.tiff", shell=True)
+		#subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -of AAIGrid -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=ahn1_"+str(runid)+"\" " + self.output_path + "/ahn1.asc", shell=True)
+		#subprocess.call(self.gdal_translate_path + " --config GDAL_FORCE_CACHING true -a_nodata -999 -of GTiff  " + self.output_path + "/ahn1.asc " + self.output_path + "/ahn1.tiff", shell=True)
 		#subprocess.call(self.gdalwarp_path + " -overwrite -srcnodata -999 -dstnodata -999 -s_srs epsg:28992 -t_srs epsg:900913 " + self.output_path + "/ahn1.tiff " + self.output_path + "/ahn1_900913.tiff", shell=True)
 		self.updateStatus(runid, "running", 75)
 		#LANDSCAPE INCLUDING ELEVATION

@@ -121,7 +121,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Export results": "Exporteer resultaten",
     "Feature Grid": "Grid",
     "Fire location": "Locatie van brand",
-    "Fireline":"Stoplijn",
+    "Fireline":"Startlijn",
     "Fuel list": "Brandstoflijst",
     "Fuel model is undefined.": "Het terrein is niet opgeslagen.",
     "Initializing...": "Initialiseren",
