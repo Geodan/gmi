@@ -7,4 +7,6 @@ chown www-data /var/data/wildfire/fires
 chown www-data /var/data/wildfire/fuelmodels
 cd /farsite-python
 python setup.py install
+#Rough workaround to deal with stale apache pid files
+rm /run/apache2/*.pid
 /usr/sbin/apachectl -DFOREGROUND

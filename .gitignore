@@ -3,3 +3,4 @@
 ./nbproject/private/
 node_modules
 ./cgi-bin/settings.py
+*.iml

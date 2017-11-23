@@ -121,7 +121,7 @@ class farsiteRun():
 		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
 		sqlstring = 'WITH arr As (SELECT regexp_split_to_array(stoplines,\'!\') arr FROM administration.params_farsiterun  WHERE run = '+str(runid)+'),series AS (SELECT generate_series(1,array_length(arr,1)) c FROM arr)SELECT ST_GeometryFromText(arr[c]) geom FROM series, arr'
-		callstring = 'ogr2ogr -f "ESRI Shapefile" '+str(outdir)+'barriers.shp -overwrite PG:"host=192.168.40.5 port=5433 user=postgres dbname=models password=flups" -sql "' + sqlstring + '"'
+		callstring = 'ogr2ogr -f "ESRI Shapefile" '+str(outdir)+'barriers.shp -overwrite PG:"host='+pgserver_host+' port='+pgserver_port' user=postgres dbname=models password=flups" -sql "' + sqlstring + '"'
 		#"SELECT ST_GeometryFromText(stoplines) FROM administration.params_farsiterun  WHERE run = '+str(runid)+'"'
 		print callstring
 		subprocess.call(callstring, shell=True)

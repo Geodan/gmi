@@ -5,7 +5,7 @@
 
 // settings
 Ext.namespace('Gmi.Control', 'Gmi.Data', 'Gmi.Params', 'Gmi.Services', 'Gmi.Services.WPS', 'Gmi.Session', 'Gmi.Settings');
-
+OpenLayers.Lang.setCode('nl');
 Gmi.Settings.debug = false; //(location.host === 'brand.localhost'); // alleen lokaal default aan 
 
 // params in url
@@ -66,7 +66,7 @@ if (location.host === 'brand.localhost') {
 Gmi.userDefaults = localStorage['userDefaults'];
 if (typeof Gmi.userDefaults === 'undefined') {
     Gmi.userDefaults = {
-        station: 275 // Deelen
+        station: 0 // Own data
     };
 } else {
     Gmi.userDefaults = JSON.parse(Gmi.userDefaults);
@@ -93,6 +93,7 @@ OpenLayers.ProxyHost = Gmi.Settings.openLayers_proxyHost;
 OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "${perc}% completed": "Voortgang ${perc}%",
     "All weather data will be cleared. Are you sure?": "Alle opgeslagen weergegevens zullen worden verwijderd. Doorgaan?",
+    "and add the following layer":"en voeg de volgende laag toe",
     "Area ${area}": "Oppervlakte ${area}",
     "Area ${area} is too large; the maximum is ${max}": "Een oppervlakte van ${area} is te groot; maximaal ${max} is toegestaan.",
     "Change": "Wijzigen",
@@ -100,6 +101,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Clear weather data": "Verwijderen weerdata",
     "Click here to download the shapefile": "Klik hier om een shapefile te downloaden",
     "Close": "Sluiten",
+    "Copy current extent":"Kopieer front",
     "Cloudiness (%)": "Bewolking (%)",
     "Create landscape file on the base of currently selected region": "Bepaal hoeveelheid brandstof op basis van huidige gebied",
     "Custom data": "Eigen gegevens",
@@ -107,6 +109,8 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Date & time": "Datum & tijd",
     "Direction (&deg;)": "Richting (&deg;)",
     "Distance: ${distance} ${units}": "Afstand: ${distance} ${units}",
+    "Download": "Exporteren",
+    "Draw": "Teken",
     "Draw a fire line first": "Geen vuurfront getekend",
     "Draw fire line": "Teken vuurfront",
     "Draw new fire line": "Teken nieuw vuurfront",
@@ -117,6 +121,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Export results": "Exporteer resultaten",
     "Feature Grid": "Grid",
     "Fire location": "Locatie van brand",
+    "Fireline":"Startlijn",
     "Fuel list": "Brandstoflijst",
     "Fuel model is undefined.": "Het terrein is niet opgeslagen.",
     "Initializing...": "Initialiseren",
@@ -130,15 +135,21 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Name of terrain": "Naam van terrein",
     "Navigate in map": "Navigeer in kaart",
     "Not implemented yet": "Deze functie is nog niet geïmplementeerd.",    
+    "Output": "Uitvoer",
+    "or copy the":"of kopieer de",
+    "Play":"Stap voor stap",
     "Please wait": "Even wachten",
     "Preparing fuel model": "Bepalen van brandstof", //makelcp
     "Preparing terrain": "Uitsnijden terrein", // makesubset
     "Region is undefined.": "Er is geen gebied geselecteerd",
+    "Remove": "Verwijder",
+    "Remove all": "Verwijder alles",
     "Restore next extent": "Herstel volgende kaartbeeld",
     "Restore previous extent": "Herstel vorige kaartbeeld",
     "Running fire model": "Uitvoeren van natuurbrandmodel", // startrun
     "Save": "Opslaan",
     "Saved terrains": "Opgeslagen terreinen",
+    "Saved results": "Opgeslagen resultaten",
     "Scale line": "Schaalbalk",
     "Select area": "Selecteer oppervlakte",
     "Select region": "Selecteer gebied",
@@ -154,6 +165,7 @@ OpenLayers.Util.applyDefaults(OpenLayers.Lang['nl'], {
     "Step 2 - Inputs": "Stap 2 - Invoergegevens",
     "Step 3 - Run model": "Stap 3 - Model",
     "Step 4 - Results": "Stap 4 - Resultaat",
+    "Stopline":"Stoplijn",
     "Terrain": "Terrein",
     "Terrein ID": "Terrein ID",
     "Time": "Tijd",
@@ -1157,6 +1169,7 @@ var windColumnModel = new Ext.grid.ColumnModel({
             allowBlank: false,
             decimalSeparator: Gmi.Settings.decimalSeparator,
             minValue: 0,
+            maxValue: 50,
             maxLength: 4
         }),
         dataIndex: 'speed',
@@ -2856,7 +2869,7 @@ Ext.onReady(function() {
 							},
                             items: [
                             	{
-									html: '<p>Fireline</p>',
+									html: '<p>'+OpenLayers.i18n('Fireline')+'</p>',
 									colspan: 4
 								},
 								new Ext.Button({
@@ -2891,7 +2904,7 @@ Ext.onReady(function() {
 									cls: 'g-actie-knop'
 								}),
 								{
-									html: '<p>Stopline</p>',
+									html: '<p>'+OpenLayers.i18n('Stopline')+'</p>',
 									colspan: 4
 								},
 								new Ext.Button({
@@ -2967,7 +2980,7 @@ Ext.onReady(function() {
                             },
                             collapsible: true,
                             collapsed: true,
-                            items: [
+                            ITems: [
                                 //gridPanel // wfs grid panel
                             ],
                             listeners: {
@@ -3052,7 +3065,7 @@ Ext.onReady(function() {
                                                 layers[0].protocol.featurePrefix + '';
                                             Ext.MessageBox.show({
                                                 //msg: '<a target="_blank" href="' + url + '">' + OpenLayers.i18n('Click here to download the shapefile') + '</a>',
-                                                msg: '<center><a href="#" onclick="javascript:Gmi.downloadOnClick(\'' + url + '\')">' + OpenLayers.i18n('Click here to download the shapefile') + '</a> <br>or copy the <br><a href="'+wmsurl+'">WMS link</a> <br>and add the following layer <br><pre>'+layers[0].protocol.featureType+'</pre></center>',
+                                                msg: '<center><a href="#" onclick="javascript:Gmi.downloadOnClick(\'' + url + '\')">' + OpenLayers.i18n('Click here to download the shapefile') + '</a> <br>' + OpenLayers.i18n('or copy the')+'<br><a href="'+wmsurl+'">WMS link</a> <br>' + OpenLayers.i18n('and add the following layer')+' <br><pre>'+layers[0].protocol.featureType+'</pre></center>',
                                                 width: 300,
                                                 title: OpenLayers.i18n('Export results')
                                             });
