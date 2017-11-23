@@ -1,2 +1,22 @@
-ENGLISH
-19 FM19 2.250000 1.500000 3.710000 0.000000 1.000000 static 2000 1800 1500 0.600000 25 8000.000000 8000.000000 
+METRIC
+14 FM14 0.08	0.13	0.08	0.08	0.73	dynamic	52	26	45	27.37	30	18620	18620	Jonge droge heide
+15 FM15 0.000	0.000	0.000	0.000	1.220	dynamic	24	26	52	30.00	30	18620	18620	Oude droge heide
+16 FM16 0.000	0.000	0.000	0.82	3.06	dynamic	24	26	52	65.07	30	18620	18620	Vergraste droge heide
+17 FM17 0.18	0.39	0.07	5.77	22.13	dynamic	37	39	65	71.28	30	18620	18620	Duinheide
+18 FM18 0.05	0.12	0.01	5		53.54	dynamic	37	39	65	80.1	30	18620	18620	Oude / vergraste duinheide
+19 FM19 0.3		0.4		1.8		0.8		0.4		dynamic	65	36	52	72.85	30	18620	18620	Grove dennenbos met struik ondergroei
+20 FM20 0.200	1.680	1.990	1.130	0.490	dynamic	59	52	45	54.67	30	18620	18620	Grove dennenbos met gras ondergroei
+21 FM21 0.287	0.52	2.91	0.55	2.9		dynamic	49	45	24	51.1	25	18620	18620	Grove dennenbos met bosbes en verjonging
+22 FM22 0.000	0.000	0.000	0.390	0.000	dynamic	37	59	0	31.00	30	18620	18620	Schraal duingrasland + kale stukken
+23 FM23 0.000	0.000	0.000	1.650	0.000	dynamic	39	65	0	67.00	30	18620	18620	Schraal duin grasland + mos
+24 FM24 0		0		0		5.95	0		dynamic	49	72	0	55		40	18620	18620	Duin grasland + mos+kale stukken
+25 FM25 0.000	0.000	0.000	15.80	0.000	dynamic	49	65	0	100.0	40	18620	18620	Helmgras aaneengesloten
+26 FM26 0.100	0.570	0.230	0.950	0.25	static	37	26	52	48.00	40	18620	18620	Wilg struweel
+27 FM27 0.020	0.140	0.030	0.700	14.40	dynamic	59	52	52	110.5	40	18620	18620	Open struweel begraasd
+28 FM28 0.020	0.270	0.330	1.900	3.000	dynamic	59	52	52	40.00	40	18620	18620	Duinstruweel
+29 FM29 0.67	0.56	0		3.26	2.81	dynamic	59	52	52	54.8	40	18620	18620	Veengrasland
+30 FM30 0.22	0		0		7.64	0		dynamic	72	65	0	45.7	40	20940	20940	Veengrasland gemengd / bos
+31 FM31 1.12	2.45	0		16.4	0		dynamic	49	42	0	121.9	30	18620	18620	Veengrasland gemengd
+32 FM32 4.6		7.64	1.91	0		9.78	static	24	0	52	91.4	40	18620	18620	Vergraste veenheide
+33 FM33 6.52	3.26	0		0		3.15	static	24	0	52	60.9	30	18620	18620	Gemengde veenheide
+34 FM34 0.89	0		0		5.62	0		dynamic	59	52	0	45.7	40	18620	18620	Veenstruweel

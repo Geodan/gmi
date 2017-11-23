@@ -63,6 +63,7 @@ class farsiteRun():
 		
 		#COPY CORRECT FUELMODEL
 		lcpfrom = '/var/data/wildfire/fuelmodels/%s/landscape.lcp' % fuelmodel
+		#lcpfrom = '/var/data/wildfire/fuelmodels/9999/landscape.lcp'
 		lcpto = outdir + '/LANDSCAPE.LCP'
 		shutil.copy2(lcpfrom, lcpto)
 		
@@ -120,7 +121,7 @@ class farsiteRun():
 		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
 		sqlstring = 'WITH arr As (SELECT regexp_split_to_array(stoplines,\'!\') arr FROM administration.params_farsiterun  WHERE run = '+str(runid)+'),series AS (SELECT generate_series(1,array_length(arr,1)) c FROM arr)SELECT ST_GeometryFromText(arr[c]) geom FROM series, arr'
-		callstring = 'ogr2ogr -f "ESRI Shapefile" '+str(outdir)+'barriers.shp -overwrite PG:"host=192.168.40.5 port=3389 user=modeluser dbname=research password=modeluser" -sql "' + sqlstring + '"'
+		callstring = 'ogr2ogr -f "ESRI Shapefile" '+str(outdir)+'barriers.shp -overwrite PG:"host=192.168.40.5 port=5433 user=postgres dbname=models password=flups" -sql "' + sqlstring + '"'
 		#"SELECT ST_GeometryFromText(stoplines) FROM administration.params_farsiterun  WHERE run = '+str(runid)+'"'
 		print callstring
 		subprocess.call(callstring, shell=True)
@@ -135,7 +136,19 @@ class farsiteRun():
 		cfg.addWeatherFname(os.path.join(outdir, 'WEATHER.WTR'))
 		cfg.addWindFname(os.path.join(outdir, 'WIND.WND'))
 		cfg.setLandscapeFname(os.path.join(outdir, 'LANDSCAPE.LCP'))
+		
+		#optional input files
+		cfg.setCustomFuelFname(os.path.join(settings.defaults_path, "custom.FMD")) 
+		#cfg.setAdjustmentFname(os.path.join(outdir, "ashley.adj") ;
 		cfg.setAdjustmentFname(os.path.join(settings.defaults_path, 'Factor_1.ADJ'))
+		#cfg.setCoarseWoodyFname(os.path.join(outdir, "ashley.cwd") ; 
+
+
+		# merge changes to adjustment data into the adjustment file
+		#cfg.getAdjustmentFile().load() ;   // get data in the file
+		
+		
+		
 		#bpd = BurnPeriodDataset()
 		#bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay)-2))
 		#bpd.getData().insert(BurnPeriod(int(startMonth),int(startDay)-1))
@@ -224,7 +237,7 @@ class farsiteRun():
 		pgserver_host = settings.pgserver_host #'192.168.40.5'
 		pgserver_port = settings.pgserver_port #'3389'
 		pgserver_user = settings.pgserver_user #'modeluser'
-		callstring = 'ogr2ogr -f "PostgreSQL" PG:"host='+pgserver_host+' port='+pgserver_port+' user=modeluser dbname=research password=modeluser" -nln result_'+str(runid)+' -lco schema=model_wildfire -lco OVERWRITE=YES '+str(outdir)+'/results.shp'
+		callstring = 'ogr2ogr -f "PostgreSQL" PG:"host='+pgserver_host+' port='+pgserver_port+' user=postgres dbname=models password=flups" -nln result_'+str(runid)+' -lco schema=model_wildfire -lco OVERWRITE=YES '+str(outdir)+'/results.shp'
 		subprocess.call(callstring, shell=True)	
 		print callstring
 		#Simplify the geometry and remove enclave fires
@@ -237,8 +250,9 @@ class farsiteRun():
 			data = (runid, runid, )
 			cur.execute(query, data )
 			self.updateStatus(runid, "running", 70, "Trying")
-		except e:
+		except:
 			self.updateStatus(runid, "running", 70, "Caught")
+		
 		#result = cur.fetchone()
 		self.updateStatus(runid, "running", 70, "Verwerken uitvoer")
 		#TODO: error checking

@@ -163,7 +163,7 @@ SELECT AddRasterConstraints('model_wildfire', 'ahn1_%(runid)s'::name, 'rast'::na
 		print('starting gdal')
 		#FUEL
 		sys.stdout.flush()
-		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=fuelmodel_"+str(runid)+"\" "+ self.output_path + "/fuelmodel.asc", shell=True)      
+		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=models user=postgres password=flups schema=model_wildfire table=fuelmodel_"+str(runid)+"\" "+ self.output_path + "/fuelmodel.asc", shell=True)      
 		#ELEV
 		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=ahn1_"+str(runid)+"\" " + self.output_path + "/ahn1.asc", shell=True)
 		#SLOPE
@@ -171,7 +171,7 @@ SELECT AddRasterConstraints('model_wildfire', 'ahn1_%(runid)s'::name, 'rast'::na
 		#ASPECT
 		#subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host=postgres port=5432 dbname=research user=modeluser password=modeluser schema=model_wildfire table=aspect_"+str(runid)+"\" " + self.output_path + "/aspect.asc", shell=True)
 		#EMPTY RASTER
-		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=research user=modeluser password=modeluser schema=model_wildfire table=emptyraster_"+str(runid)+"\" " + self.output_path + "/emptyraster.asc", shell=True)
+		subprocess.call(self.gdal_translate_path + " -of AAIGrid -a_nodata -999 -outsize 100% 100% \"PG:host="+settings.pgserver_host+" port="+settings.pgserver_port+" dbname=models user=postgres password=flups schema=model_wildfire table=emptyraster_"+str(runid)+"\" " + self.output_path + "/emptyraster.asc", shell=True)
 		#Some unneeded steps
 		#subprocess.call(self.gdal_translate_path + " -of GTiff  " + self.output_path+ "/fuelmodel.asc " + self.output_path + "/fuelmodel.tiff", shell=True)
 		#subprocess.call(self.gdalwarp_path + " -overwrite -s_srs epsg:28992 -t_srs epsg:900913 " + self.output_path + "/fuelmodel.tiff " + self.output_path + "/fuelmodel_900913.tiff", shell=True)
@@ -183,6 +183,8 @@ SELECT AddRasterConstraints('model_wildfire', 'ahn1_%(runid)s'::name, 'rast'::na
 		#subprocess.call(self.lcpmake_path + " -landscape " + self.output_path + "/landscape -elevation " + self.output_path + "/ahn1.asc -slope " + self.output_path + "/slope.asc -aspect " + self.output_path + "/aspect.asc -fuel " + self.output_path + "/fuelmodel.asc -cover " + self.output_path + "/emptyraster.asc -latitude 90", shell=True)
 		#LANDSCAPE EXCLUDING ELEVATION
 		subprocess.call(self.lcpmake_path + " -landscape " + self.output_path + "/landscape -elevation " + self.output_path + "/emptyraster.asc -slope " + self.output_path + "/emptyraster.asc -aspect " + self.output_path + "/emptyraster.asc -fuel " + self.output_path + "/fuelmodel.asc -cover " + self.output_path + "/emptyraster.asc -latitude 90", shell=True)
+		#TEST WITH NLR DATA
+		#subprocess.call(self.lcpmake_path + " -landscape " + self.output_path + "/landscape -elevation /home/geodan/eaglespace/empty_rd.asc -slope /home/geodan/eaglespace/empty_rd.asc -aspect /home/geodan/eaglespace/empty_rd.asc -fuel /home/geodan/eaglespace/fuel_rd.asc -cover /home/geodan/eaglespace/empty_rd.asc -latitude 90", shell=True)
 		self.updateStatus(runid, "finished", 100)
 		print('done')
 		return

@@ -43,7 +43,7 @@ DROP TABLE IF EXISTS model_wildfire.terrein_%s;
 CREATE TABLE  model_wildfire.terrein_%s AS (
 WITH selectionbox AS (
 	SELECT 
-	run, St_Transform(geom, 3035) geom FROM administration.params_makesubset WHERE run = %s
+	run, St_Transform(geom, 900915) geom FROM administration.params_makesubset WHERE run = %s
 )
 ,dump AS (
 SELECT 
@@ -59,10 +59,10 @@ SELECT
 		,900913
 	)::geometry(Polygon,900913) geom --typemodded to register correctly in geom_columns
 	,b.run
-FROM corine.corinelc_2006 a, selectionbox b, administration.corine2fuel c
+FROM corine.corinelc_2012 a, selectionbox b, administration.corine2fuel c
 LEFT JOIN administration.fuelmodels d ON (c.fuel_id = d.id)
 	WHERE ST_Intersects(a.geom,b.geom)
-	AND a.code_06::Text = c.corine_id::Text
+	AND a.code_12::Text = c.corine_id::Text
 )
 SELECT * FROM dump WHERE ST_GeometryType(geom) = 'ST_Polygon'
 )

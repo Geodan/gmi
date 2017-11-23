@@ -30,10 +30,10 @@
 
 
 ####### settings for geodan research cluser ######
-conn_params = "host=192.168.40.5 port=3389 dbname=research user=modeluser password=modeluser"
+conn_params = "host=192.168.40.5 port=5433 dbname=models user=postgres password=flups"
 pgserver_host = '192.168.40.5'
-pgserver_port = '3389'
-pgserver_user = 'modeluser'
+pgserver_port = '5433'
+pgserver_user = 'postgres'
 gs_host = '192.168.40.8'
 gs_port='3389'
 

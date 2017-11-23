@@ -303,8 +303,9 @@ function translateDom() {
 // data
 
 Gmi.Data.fuels = {
-  "count": 58,
+  "count": 60,
   "types": {
+  	/*
     "1": "GR1 | Short grass",
     "2": "GR2 | Timber grass and understory",
     "3": "GR3 | Tall grass",
@@ -318,6 +319,31 @@ Gmi.Data.fuels = {
     "11": "SB11 | Light slash",
     "12": "SB12 | Medium slash",
     "13": "SB13 | Heavy slash",
+    */
+    /* Begin custom fuel models */
+    "14": "FM14 | open duin 1                              ",
+    "15": "FM15 | open duin 2, helm                        ",
+    "16": "FM16 | duingrasland 1                           ",
+    "17": "FM17 | duingrasland 2, verruigd                 ",
+    "18": "FM18 | grasland 1, droge zandgrond laag buntgras",
+    "19": "FM19 | grasland 2, pijpenstrootje middel        ",
+    "20": "FM20 | grasland 3, pijpenstrootje hoog          ",
+    "21": "FM21 | grasland 4, vochtig                      ",
+    "22": "FM22 | grasland 5, vochtig                      ",
+	"23": "FM23 | jonge heide                              ",
+	"24": "FM24 | vergraste heide                          ",
+	"25": "FM25 | oude heide                               ",
+	"26": "FM26 | veenheide                                ",
+	"27": "FM27 | laag struweel                            ",
+	"28": "FM28 | struweel                                 ",
+	"29": "FM29 | open naaldbos, gras ondergroei           ",
+	"30": "FM30 | open naaldbos, lage struik ondergroei    ",
+	"31": "FM31 | open naaldbos, dichte struik ondergroei  ",
+	"32": "FM32 | dicht naaldbos, geen ondergroei          ",
+	"33": "FM33 | loofbos                                  ",
+	"34": "FM34 | veenbos                                  ",
+    /* Einde custom fuel models */
+    /*
     "91": "NB91 | Urban\/suburban",
     "92": "NB92 | Snow\/Ice",
     "93": "NB93 | Agricultural field",
@@ -325,44 +351,45 @@ Gmi.Data.fuels = {
     "99": "NB99 | Bear ground",
     "101": "GR101 | Short, sparse dry climate grass",
     "102": "GR102 | Low load dry climate grass",
-    "103": "GR103 | Low load very coarse humid climate grass",
-    "104": "GR104 | Moderate load dry climate grass",
-    "105": "GR105 | Low load humid climate grass",
-    "106": "GR106 | Moderate load humid climate grass",
-    "107": "GR107 | High load dry climate grass",
-    "108": "GR108 | High load very coarse humid climate grass",
-    "109": "GR109 | Very high load humid climate grass",
-    "121": "GS121 | Low load dry climate grass-shrub",
-    "122": "GS122 | Moderate load dry climate grass-shrub",
-    "123": "GS123 | Moderate load humid climate grass-shrub",
-    "124": "GS124 | High load humid climate grass-shrub",
-    "141": "SH141 | Low load dry climate shrub",
+    */
+    "103": "GR103 | Helmgras + kale stukken", //Low load very coarse humid climate grass",
+    /*"104": "GR104 | Moderate load dry climate grass",*/
+    "105": "GR105 | Kort begraasd duin grasland",//Low load humid climate grass",
+    "106": "GR106 | Begraasd duin grasland",//Moderate load humid climate grass",
+    "107": "GR107 | Helmgras",//High load dry climate grass",
+    "108": "GR108 | Pijpestrootje",//High load very coarse humid climate grass",
+    "109": "GR109 | Pijpestrootje met droge heide",//Very high load humid climate grass",
+    /*"121": "GS121 | Low load dry climate grass-shrub",
+    "122": "GS122 | Moderate load dry climate grass-shrub",*/
+    "123": "GS123 | Duinvallei kort gras",//Moderate load humid climate grass-shrub",
+    "124": "GS124 | Gemengd duinstruweel",//High load humid climate grass-shrub",
+    /*"141": "SH141 | Low load dry climate shrub",
     "142": "SH142 | Moderate load dry climate shrub",
     "143": "SH143 | Moderate load humid climate shrub",
     "144": "SH144 | Low load humid climate timber shrub",
-    "145": "SH145 | High load dry climate shrub",
-    "146": "SH146 | Low load humid climate shrub",
-    "147": "SH147 | Very high load dry climate shrub",
-    "148": "SH148 | High load humid climate shrub",
-    "149": "SH149 | Very high load humid climate shrub",
-    "161": "TU161 | Ligh load dry climate timber-grass-shrub",
+    "145": "SH145 | High load dry climate shrub",*/
+    "146": "SH146 | Duinvallei struweel vergrast",//Low load humid climate shrub",
+    /*"147": "SH147 | Very high load dry climate shrub",*/
+    "148": "SH148 | Struweel met grassen",//High load humid climate shrub",
+    "149": "SH149 | Duinvallei struweel",//Very high load humid climate shrub",
+    /*"161": "TU161 | Ligh load dry climate timber-grass-shrub",
     "162": "TU162 | Moderate load humid climate timber-shrub",
     "163": "TU163 | Moderate load humid climate timber-grass-shrub",
-    "164": "TU164 | Dwarf conifer with understory",
-    "165": "TU165 | Very high load dry climate timber-shrub",
-    "181": "TL181 | Low load compact conifer litter",
-    "182": "TL182 | Low load broadleaf litter",
-    "183": "TL183 | Moderate load conifer litter",
-    "184": "TL184 | Small downed logs",
+    "164": "TU164 | Dwarf conifer with understory",*/
+    "165": "TU165 | Douglasspar met ondergroei (alle leeftijdsklassen)", //Very high load dry climate timber-shrub",
+    /*"181": "TL181 | Low load compact conifer litter",
+    "182": "TL182 | Low load broadleaf litter",*/
+    "183": "TL183 | Douglasspar zonder ondergroei (alle leeftijdsklassen)", //Moderate load conifer litter",
+    /*"184": "TL184 | Small downed logs",
     "185": "TL185 | High load conifer litter",
     "186": "TL186 | Moderate load broadleaf litter",
     "187": "TL187 | Large downed logs",
-    "188": "TL188 | Long-needle litter",
-    "189": "TL189 | Very high load broadleaf litter",
-    "201": "SB201 | Low load activity fuel",
+    "188": "TL188 | Long-needle litter",*/
+    "189": "TL189 | Beukenbos (alle leeftijdsklassen)", //Very high load broadleaf litter",
+    /*"201": "SB201 | Low load activity fuel",
     "202": "SB202 | Moderate load activ. fuel or low load blowdown",
     "203": "SB203 | High load activ. fuel or mod. load blowdown",
-    "204": "SB204 | High load blowdown"
+    "204": "SB204 | High load blowdown"*/
   },
   colors: {
     "106": "#C25283", // heide paars?
@@ -672,7 +699,8 @@ function getClimateData(station) {
             }
         }
     }
-    
+    //TT: disabled any other station than 0
+    station =0;
     // probeer in te lezen
     if (station === 0) {
         // bouw array van weather data voor eigen gegevens
